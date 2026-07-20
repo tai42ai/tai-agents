@@ -91,7 +91,7 @@ jobs:
     # Secrets cannot be read from a step-level `if`, so the token is lifted to a
     # job-level env var that the step condition can test.
     env:
-      E2E_DISPATCH_TOKEN: ${{ secrets.TAI_CI_TOKEN }}
+      E2E_DISPATCH_TOKEN: ${{ secrets.TAI_E2E_DISPATCH_TOKEN }}
     steps:
       - name: Dispatch ecosystem-push to the integration-test suite
         if: env.E2E_DISPATCH_TOKEN != ''
