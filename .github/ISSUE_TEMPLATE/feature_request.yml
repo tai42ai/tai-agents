@@ -1,0 +1,19 @@
+name: Feature request
+description: Propose an addition or change to tai-agents
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What should be added or changed, and what problem does it solve? Remember the plugin rule — tai-agents depends on tai-contract + tai-kit + the agent runtime only, never imports the skeleton, and takes no direct model-provider SDK dependency.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: tai-agents version
+      description: The version you are using, if relevant.
+      placeholder: "0.1.0"
+    validations:
+      required: false

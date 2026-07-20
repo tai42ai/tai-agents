@@ -1,0 +1,52 @@
+spec_version: 1
+namespace: tai42
+name: agents
+package: tai-agents
+version: 0.1.0
+description: "Reference agents package for the TAI ecosystem: opt-in, manifest-loaded generic agents built on the deepagents/LangGraph runtime."
+license: Apache-2.0
+homepage: https://tai42.ai
+repository: https://github.com/tai42ai/tai-agents
+contract: ">=0.1,<0.2"
+categories: [agents]
+tags: [agents, deepagents, langgraph, llm]
+permissions:
+  network: true
+  subprocess: false
+  filesystem: true
+provides:
+  - kind: agent
+    name: deep_agent
+    module: tai_agents.deep_agent
+    description: "Run a deep agent with planning, subagents, skills, and a filesystem backend."
+    tags: [deep, planning]
+  - kind: agent
+    name: refine_agent
+    module: tai_agents.refine_agent
+    description: "Run an Evaluator-Critic refinement loop until the Critic approves or the budget runs out."
+    tags: [refine, critic]
+  - kind: agent
+    name: voting_agent
+    module: tai_agents.voting_agent
+    description: "Run a voting workflow — voter LLMs answer in parallel, then a judge LLM decides."
+    tags: [voting]
+  - kind: agent
+    name: retrieval_tools_agent
+    module: tai_agents.retrieval_tools_agent
+    description: "A tools agent that retrieves its tools on demand from a vector store."
+    tags: [retrieval, tools]
+  - kind: agent
+    name: tools_agent
+    module: tai_agents.tools_agent
+    description: "Run a LangGraph tools agent over tools loaded by name (and optional presets)."
+    tags: [tools]
+  - kind: agent
+    name: mcp_tools_agent
+    module: tai_agents.mcp_tools_agent
+    description: "Run a LangGraph tools agent whose tools are loaded from an MCP configuration."
+    tags: [mcp, tools]
+  - kind: agent
+    name: vqa_agent
+    module: tai_agents.vqa_agent
+    description: "Analyze an image and answer a query about it using a multimodal LLM."
+    tags: [vqa, multimodal]
