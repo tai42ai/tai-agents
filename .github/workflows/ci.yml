@@ -27,12 +27,12 @@ jobs:
       # this repo (tai42-kit in turn resolves tai42-contract from the same layout).
       # tai42-skeleton is a TEST-ONLY sibling (the dev extra): the e2e suite boots
       # the real skeleton app in-process to prove tools_agent registers, so CI
-      # clones it too (tai42-skeleton resolves tai-contract/tai-kit from the same
+      # clones it too (tai42-skeleton resolves tai42-contract/tai42-kit from the same
       # layout).
       # TEMPORARY (private dev): the sibling repos are private, so cross-repo
       # checkout needs TAI_CI_TOKEN (fine-grained, Contents:read on the tai
       # library repos); the default GITHUB_TOKEN cannot read another private repo.
-      # TODO(public): once these repos are public and tai-contract/tai-kit publish
+      # TODO(public): once these repos are public and tai42-contract/tai42-kit publish
       # to PyPI, delete the token lines and the sibling checkouts — install from PyPI.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -100,6 +100,6 @@ jobs:
         run: |
           gh api 'repos/${{ github.repository_owner }}/tai-e2e/dispatches' \
             -f 'event_type=ecosystem-push' \
-            -f 'client_payload[repo]=tai42-agents' \
+            -f 'client_payload[repo]=tai-agents' \
             -f 'client_payload[ref]=${{ github.sha }}' \
             -f 'client_payload[legs]=arq'

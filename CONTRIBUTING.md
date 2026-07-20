@@ -39,6 +39,26 @@ skeleton in either direction.
   nothing here registers through `tai42_app`.
 - `tests/` mirrors `src/`.
 
+## Naming
+
+PyPI is a flat namespace with no owner in the path, so distributions carry the
+`tai42-` prefix. GitHub repositories keep their `tai-` names, because the
+`tai42ai` organisation already namespaces them. Import packages follow the
+distribution.
+
+| Surface | Form |
+| --- | --- |
+| Distribution — PyPI, `pip install`, dependency pins | `tai42-<name>` |
+| Import package | `tai42_<name>` |
+| GitHub repository and sibling checkout directory | `tai-<name>` |
+
+So a dependency is declared as `tai42-<name>` but resolved from `../tai-<name>`
+during local development, and both spellings are correct in their own context.
+
+Some surfaces are deliberately neither, and must not be renamed: the `tai` CLI
+command (`tai42` is an alias), the Prometheus metric namespace (`tai_tool_*`),
+`TAI_*` environment variables, and the `tai-plugin.yml` descriptor filename.
+
 ## Dev
 
 ```bash
