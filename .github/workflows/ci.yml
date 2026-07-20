@@ -54,7 +54,7 @@ jobs:
           repository: ${{ github.repository_owner }}/tai-identity-redis
           path: tai-identity-redis
           token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           version: "0.11.26"
           enable-cache: true
