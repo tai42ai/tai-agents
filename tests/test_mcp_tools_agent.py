@@ -1,8 +1,8 @@
 """Tests for the ``mcp_tools_agent``.
 
 Importing the agent module registers it on the recording app bound by
-``conftest`` (``@tai_app.agents.agent``); the live instance is fetched back
-through ``tai_app.agents.get_agent``. The ``fastmcp`` client and the delegated
+``conftest`` (``@tai42_app.agents.agent``); the live instance is fetched back
+through ``tai42_app.agents.get_agent``. The ``fastmcp`` client and the delegated
 tools-agent event stream are faked, so no live LLM, MCP server, or network is
 touched: ``Client`` becomes a scripted async context manager,
 ``mcp_tools_to_lc_tools`` returns a fixed tool list, and
@@ -18,8 +18,8 @@ from typing import Any
 
 import pytest
 from pydantic import ValidationError
-from tai_contract.agent import Agent
-from tai_contract.agent.events import (
+from tai42_contract.agent import Agent
+from tai42_contract.agent.events import (
     MessageDelta,
     MessageFinal,
     ReasoningStep,
@@ -28,10 +28,10 @@ from tai_contract.agent.events import (
     ToolCallStep,
     ToolResultStep,
 )
-from tai_contract.app import tai_app
+from tai42_contract.app import tai42_app
 
-import tai_agents.mcp_tools_agent as mcp_mod
-from tai_agents._internal.reject import reject_unhonored
+import tai42_agents.mcp_tools_agent as mcp_mod
+from tai42_agents._internal.reject import reject_unhonored
 
 
 async def _collect(agen: AsyncIterator[StreamEvent]) -> list[StreamEvent]:
@@ -78,7 +78,7 @@ def _install_fakes(monkeypatch: Any, events: list[StreamEvent]) -> dict[str, Any
 def test_agent_is_registered() -> None:
     """The module import registered the agent under its name with the declared
     tool metadata."""
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     assert isinstance(agent, mcp_mod.McpToolsAgent)
     assert agent.tool_name == "mcp_tools_agent"
     assert agent.tool_description
@@ -98,7 +98,7 @@ def test_astream_forwards_config_and_streams_taxonomy(monkeypatch, resource_mana
     ]
     captured = _install_fakes(monkeypatch, events)
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     cfg = {"mcpServers": {"s1": {"command": "run"}}}
     langgraph_config = {"configurable": {"thread_id": "t"}}
     out = asyncio.run(
@@ -141,7 +141,7 @@ def test_inject_env_injects_only_allowlisted_vars(monkeypatch, resource_manager)
     monkeypatch.setenv("MCP_SECRET", "top-secret")
     captured = _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     cfg = {
         "mcpServers": {
             "s1": {},
@@ -182,7 +182,7 @@ def test_inject_env_does_not_mutate_caller_config(monkeypatch, resource_manager)
     monkeypatch.setenv("MCP_TEST_ENV", "from-os")
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     cfg = {"mcpServers": {"s1": {}, "s2": {"env": {"OWN": "keep"}}}}
     asyncio.run(
         _collect(
@@ -205,7 +205,7 @@ def test_inject_env_without_allowlist_raises(monkeypatch, resource_manager) -> N
     monkeypatch.setenv("MCP_TEST_ENV", "from-os")
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     cfg = {"mcpServers": {"s1": {}}}
     with pytest.raises(ValueError, match="inject_env=True requires a non-empty env_allowlist"):
         asyncio.run(_collect(agent.astream(mcp_config=cfg, user_message="hi", inject_env=True)))
@@ -218,7 +218,7 @@ def test_run_drains_astream_to_final_text(monkeypatch, resource_manager) -> None
         [MessageDelta(text="Hel"), MessageFinal(text="Hello")],
     )
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     out = asyncio.run(agent.run(mcp_config={"mcpServers": {"s1": {}}}, user_message="hi"))
     assert out == "Hello"
 
@@ -230,11 +230,11 @@ def test_run_with_response_format_returns_the_structured_object(monkeypatch, res
     """``response_format`` is honored on the run face: the delegated run forces the
     structured output and ``run`` returns the structured object drained from the
     stream, with the schema threaded down to the delegated stream."""
-    from tai_contract.agent.events import StructuredFinal
+    from tai42_contract.agent.events import StructuredFinal
 
     captured = _install_fakes(monkeypatch, [MessageFinal(text="text"), StructuredFinal(data={"value": 7})])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     out = asyncio.run(agent.run(mcp_config={"mcpServers": {"s1": {}}}, user_message="hi", response_format=_MCP_SCHEMA))
     assert out == {"value": 7}
     assert captured["response_format"] == _MCP_SCHEMA
@@ -245,7 +245,7 @@ def test_run_response_format_without_structured_raises_loudly(monkeypatch, resou
     loudly (``_drain``'s rule) rather than silently returning the message text."""
     _install_fakes(monkeypatch, [MessageFinal(text="text")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(RuntimeError, match="no structured output"):
         asyncio.run(agent.run(mcp_config={"mcpServers": {"s1": {}}}, user_message="hi", response_format=_MCP_SCHEMA))
 
@@ -255,7 +255,7 @@ def test_run_response_format_without_title_raises_loudly(monkeypatch, resource_m
     at the run seam."""
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(ValueError, match="top-level 'title'"):
         asyncio.run(
             agent.run(mcp_config={"mcpServers": {"s1": {}}}, user_message="hi", response_format={"type": "object"})
@@ -269,7 +269,7 @@ def test_astream_response_format_without_title_raises_loudly(monkeypatch, resour
     already connected."""
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(ValueError, match="top-level 'title'"):
         asyncio.run(
             _collect(
@@ -287,7 +287,7 @@ def test_astream_overlays_thread_id_and_checkpoint_onto_configurable(monkeypatch
     ``checkpoint_id``) rather than dropping them."""
     captured = _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     base = {"recursion_limit": 7, "configurable": {"keep": "me"}}
     asyncio.run(
         _collect(
@@ -317,7 +317,7 @@ def test_run_overlays_thread_id_onto_configurable(monkeypatch, resource_manager)
     face too, not only on astream."""
     captured = _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     asyncio.run(
         agent.run(
             mcp_config={"mcpServers": {"s1": {}}},
@@ -335,7 +335,7 @@ def test_astream_with_only_checkpoint_omits_thread_id(monkeypatch, resource_mana
     run still gets a freshly minted thread — and the caller's base is untouched."""
     captured = _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     base = {"configurable": {"keep": "me"}}
     asyncio.run(
         _collect(
@@ -361,7 +361,7 @@ def test_astream_with_neither_memory_key_forwards_the_base_by_value(monkeypatch,
     scribbled on by one of them."""
     captured = _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     base = {"recursion_limit": 5, "configurable": {"keep": "me"}}
     asyncio.run(
         _collect(agent.astream(mcp_config={"mcpServers": {"s1": {}}}, user_message="hi", langgraph_config=base))
@@ -379,7 +379,7 @@ def test_astream_honors_recursion_limit_into_config(monkeypatch, resource_manage
     a real forwarded value."""
     captured = _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     base = {"configurable": {"keep": "me"}}
     asyncio.run(
         _collect(
@@ -403,7 +403,7 @@ def test_run_honors_recursion_limit_into_config(monkeypatch, resource_manager) -
     the delegated config's top level — the honor reaches the seam on the run face too."""
     captured = _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     asyncio.run(
         agent.run(
             mcp_config={"mcpServers": {"s1": {}}},
@@ -421,7 +421,7 @@ def test_run_rejects_unhonored_contract_param(monkeypatch, resource_manager) -> 
     dropped."""
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(RuntimeError, match=r"mcp_tools_agent\.run does not support .*\bsubagents\b"):
         asyncio.run(
             agent.run(
@@ -437,7 +437,7 @@ def test_astream_rejects_unhonored_contract_param(monkeypatch, resource_manager)
     the exact ``astream`` face, in parity with the run face."""
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(RuntimeError, match=r"mcp_tools_agent\.astream does not support .*\bstrategy\b"):
         asyncio.run(
             _collect(
@@ -454,11 +454,11 @@ def test_astream_with_response_format_emits_structured_final(monkeypatch, resour
     """``response_format`` is honored on the stream face — in parity with run: it
     threads to the delegated stream (which forces the structured output) and the
     terminal :class:`StructuredFinal` surfaces."""
-    from tai_contract.agent.events import StructuredFinal
+    from tai42_contract.agent.events import StructuredFinal
 
     captured = _install_fakes(monkeypatch, [MessageFinal(text="text"), StructuredFinal(data={"value": 7})])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     out = asyncio.run(
         _collect(agent.astream(mcp_config={"mcpServers": {"s1": {}}}, user_message="hi", response_format=_MCP_SCHEMA))
     )
@@ -474,7 +474,7 @@ def test_astream_with_response_format_but_no_structured_raises_loudly(monkeypatc
     ``run`` — rather than silently omitting the frame."""
     _install_fakes(monkeypatch, [MessageFinal(text="text only")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(RuntimeError, match="no structured output"):
         asyncio.run(
             _collect(
@@ -506,7 +506,7 @@ def test_run_rejects_every_unhonored_param(monkeypatch, resource_manager, param,
     """``run`` rejects every parameter in the guard's reasons map, naming it and the
     exact ``run`` face — never a silent drop."""
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(RuntimeError, match=rf"mcp_tools_agent\.run does not support .*\b{param}\b"):
         asyncio.run(agent.run(mcp_config={"mcpServers": {"s1": {}}}, user_message="hi", **{param: value}))
 
@@ -516,7 +516,7 @@ def test_astream_rejects_every_unhonored_param(monkeypatch, resource_manager, pa
     """``astream`` rejects the same full set as ``run`` — parity — each naming the
     exact ``astream`` face."""
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(RuntimeError, match=rf"mcp_tools_agent\.astream does not support .*\b{param}\b"):
         asyncio.run(_collect(agent.astream(mcp_config={"mcpServers": {"s1": {}}}, user_message="hi", **{param: value})))
 
@@ -572,7 +572,7 @@ def test_astream_rejects_blank_memory_key(monkeypatch, resource_manager, key, bl
     would silently share a checkpoint namespace across independent runs — so ``astream``
     raises before the overlay rather than writing it verbatim."""
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(ValueError, match=rf"mcp_tools_agent\.astream: {key} must be a non-empty string"):
         asyncio.run(_collect(agent.astream(mcp_config={"mcpServers": {"s1": {}}}, user_message="hi", **{key: blank})))
 
@@ -582,7 +582,7 @@ def test_astream_rejects_blank_memory_key(monkeypatch, resource_manager, key, bl
 def test_run_rejects_blank_memory_key(monkeypatch, resource_manager, key, blank) -> None:
     """Parity with ``astream``: ``run`` rejects a present-but-blank memory key loudly."""
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(ValueError, match=rf"mcp_tools_agent\.run: {key} must be a non-empty string"):
         asyncio.run(agent.run(mcp_config={"mcpServers": {"s1": {}}}, user_message="hi", **{key: blank}))
 
@@ -595,7 +595,7 @@ def test_astream_rejects_non_string_memory_key(monkeypatch, resource_manager, ke
     offending param and the received type before the overlay, rather than probing a
     non-string for whitespace."""
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(
         TypeError, match=rf"mcp_tools_agent\.astream: {key} must be a string or None; got {type(value).__name__}"
     ):
@@ -608,7 +608,7 @@ def test_run_rejects_non_string_memory_key(monkeypatch, resource_manager, key, v
     """Parity with ``astream``: ``run`` rejects a non-string memory key with a
     ``TypeError`` naming the offending param and the received type."""
     _install_fakes(monkeypatch, [MessageFinal(text="ok")])
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     with pytest.raises(
         TypeError, match=rf"mcp_tools_agent\.run: {key} must be a string or None; got {type(value).__name__}"
     ):
@@ -620,7 +620,7 @@ def test_astream_allows_role_specific_extension_kwarg(monkeypatch, resource_mana
     is not an unhonored contract parameter and passes through without raising."""
     captured = _install_fakes(monkeypatch, [MessageFinal(text="ok")])
 
-    agent = tai_app.agents.get_agent("mcp_tools_agent")
+    agent = tai42_app.agents.get_agent("mcp_tools_agent")
     out = asyncio.run(
         _collect(
             agent.astream(
@@ -641,7 +641,7 @@ def test_astream_bounds_client_connect_and_leaks_no_client(monkeypatch, resource
     naming the env var, and no client is left un-exited — the stalled enter is
     cancelled (nothing successfully entered, so nothing to close and nothing
     leaked)."""
-    from tai_kit.settings.cache_registry import reset_all_settings
+    from tai42_kit.settings.cache_registry import reset_all_settings
 
     class _BlockingClient:
         """A client whose context enter blocks forever; records whether it was
@@ -674,7 +674,7 @@ def test_astream_bounds_client_connect_and_leaks_no_client(monkeypatch, resource
     monkeypatch.setenv("MCP_CLIENT_CONNECT_TIMEOUT_SECONDS", "0.01")
     reset_all_settings()
     try:
-        agent = tai_app.agents.get_agent("mcp_tools_agent")
+        agent = tai42_app.agents.get_agent("mcp_tools_agent")
         with pytest.raises(TimeoutError, match="MCP_CLIENT_CONNECT_TIMEOUT_SECONDS"):
             asyncio.run(_collect(agent.astream(mcp_config={"mcpServers": {"s1": {}}}, user_message="hi")))
     finally:

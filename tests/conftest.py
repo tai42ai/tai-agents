@@ -1,10 +1,10 @@
-"""Bind a recording app to the ``tai_app`` handle before any test module imports.
+"""Bind a recording app to the ``tai42_app`` handle before any test module imports.
 
-Agent modules register through ``tai_app.agents.agent(name)`` at import time,
+Agent modules register through ``tai42_app.agents.agent(name)`` at import time,
 mirroring how the host binds the app and then imports the module named by the
 manifest's ``agents:`` entry. Binding a recording app here lets a test module
 register an agent with the real decorator syntax at module level and then fetch
-the live instance back through ``tai_app.agents.get_agent``.
+the live instance back through ``tai42_app.agents.get_agent``.
 
 The recording facets mirror the contract app protocols the agents reach
 through the handle:
@@ -42,9 +42,9 @@ from typing import Any
 
 import pytest
 from langchain_core.tools import StructuredTool
-from tai_contract.agent import Agent
-from tai_contract.app import tai_app
-from tai_contract.monitoring import TraceContext
+from tai42_contract.agent import Agent
+from tai42_contract.app import tai42_app
+from tai42_contract.monitoring import TraceContext
 
 
 class RecordingAgents:
@@ -181,7 +181,7 @@ class RecordingResourceManager:
         if template_id is not None:
             if template_id not in self.templates:
                 # The real manager raises ``TemplateNotFoundError`` (a bare
-                # ``Exception`` subclass tai-agents cannot import); the agents
+                # ``Exception`` subclass tai42-agents cannot import); the agents
                 # never catch it, so what a caller observes is "propagates and
                 # aborts". ``RuntimeError`` reproduces that without a type — like
                 # ``KeyError`` — that a narrow ``except LookupError`` would catch.
@@ -207,7 +207,7 @@ class RecordingApp:
 
 
 APP = RecordingApp()
-tai_app.bind(APP)
+tai42_app.bind(APP)
 
 
 @pytest.fixture

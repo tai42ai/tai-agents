@@ -12,16 +12,16 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 from pydantic import BaseModel
 
-from tai_agents.deep_agent import factory
-from tai_agents.deep_agent.backend import SKILLS_ROOT
-from tai_agents.deep_agent.factory import (
+from tai42_agents.deep_agent import factory
+from tai42_agents.deep_agent.backend import SKILLS_ROOT
+from tai42_agents.deep_agent.factory import (
     _collect_inline_skills,
     _resolve_subagent,
     _skills_with_inline,
     _validate,
     build_deep_agent,
 )
-from tai_agents.deep_agent.spec import InlineSkill, ResolvedSubAgentSpec
+from tai42_agents.deep_agent.spec import InlineSkill, ResolvedSubAgentSpec
 
 _FAKE_LLM = cast(BaseChatModel, "LLM")
 

@@ -3,7 +3,7 @@ the real decorator, streaming a scripted contract-event sequence.
 
 The fake lives here in ``tests/`` — it is NOT part of the shipped package. It
 subclasses the contract ``Agent`` ABC, registers via
-``@tai_app.agents.agent(name)`` at module import (the recording app is bound in
+``@tai42_app.agents.agent(name)`` at module import (the recording app is bound in
 ``conftest.py`` before this module imports, mirroring the host's
 bind-then-import order), and its ``astream`` yields a fixed
 ``ReasoningStep`` → ``MessageDelta``s → ``MessageFinal`` → ``RunUsage``
@@ -17,7 +17,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from pydantic import BaseModel
-from tai_contract.agent import (
+from tai42_contract.agent import (
     Agent,
     MessageDelta,
     MessageFinal,
@@ -25,7 +25,7 @@ from tai_contract.agent import (
     RunUsage,
     StreamEvent,
 )
-from tai_contract.app import tai_app
+from tai42_contract.app import tai42_app
 
 AGENT_NAME = "fake_streamer"
 
@@ -34,7 +34,7 @@ class FakeStreamInput(BaseModel):
     user_message: str = ""
 
 
-@tai_app.agents.agent(AGENT_NAME)
+@tai42_app.agents.agent(AGENT_NAME)
 class FakeStreamingAgent(Agent):
     """Streams a fixed reasoning → deltas → final → usage script."""
 
@@ -58,13 +58,13 @@ async def _collect_events(agent: Agent) -> list[StreamEvent]:
 
 
 def test_decorator_registers_a_live_instance() -> None:
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     assert isinstance(agent, FakeStreamingAgent)
     assert isinstance(agent, Agent)
 
 
 def test_astream_emits_the_exact_scripted_sequence() -> None:
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = asyncio.run(_collect_events(agent))
 
     assert [type(event) for event in events] == [
@@ -91,5 +91,5 @@ def test_astream_emits_the_exact_scripted_sequence() -> None:
 
 
 def test_run_drains_the_stream_to_the_final_text() -> None:
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     assert asyncio.run(agent.run(user_message="hi")) == "hello world"

@@ -18,15 +18,15 @@ from typing import Any
 import pytest
 from langchain_core.messages import AIMessageChunk
 from pydantic import ValidationError
-from tai_contract.agent import Agent
-from tai_contract.agent.events import MessageDelta, MessageFinal, RunUsage, StreamEvent
-from tai_contract.app import tai_app
-from tai_kit.utils.data.json_schema_util import JsonSchemaValidationError
+from tai42_contract.agent import Agent
+from tai42_contract.agent.events import MessageDelta, MessageFinal, RunUsage, StreamEvent
+from tai42_contract.app import tai42_app
+from tai42_kit.utils.data.json_schema_util import JsonSchemaValidationError
 
-import tai_agents.vqa_agent as vqa
-from tai_agents._internal.reject import reject_unhonored
-from tai_agents._internal.text import text_of
-from tai_agents.vqa_agent import VqaAgent, VqaAgentInput
+import tai42_agents.vqa_agent as vqa
+from tai42_agents._internal.reject import reject_unhonored
+from tai42_agents._internal.text import text_of
+from tai42_agents.vqa_agent import VqaAgent, VqaAgentInput
 
 
 class _FakeLLM:
@@ -96,7 +96,7 @@ def _install_scripted_llm(monkeypatch: pytest.MonkeyPatch, chunks: list[AIMessag
 
 
 def test_decorator_registers_a_live_instance() -> None:
-    agent = tai_app.agents.get_agent("vqa_agent")
+    agent = tai42_app.agents.get_agent("vqa_agent")
     assert isinstance(agent, VqaAgent)
     assert isinstance(agent, Agent)
     assert agent.tool_name == "vqa_agent"
@@ -247,7 +247,7 @@ def test_astream_with_response_format_emits_one_structured_final(monkeypatch: py
     ``with_structured_output`` and emits exactly one :class:`StructuredFinal` (no
     token deltas), passing the schema straight to the provider (converter off the
     force path)."""
-    from tai_contract.agent.events import StructuredFinal
+    from tai42_contract.agent.events import StructuredFinal
 
     llm = _StructuredLLM({"answer": "a cat"})
     _install_structured_llm(monkeypatch, llm)
@@ -496,7 +496,7 @@ def test_tool_input_requires_image_url_and_query() -> None:
 
 
 class TestTextOf:
-    """The shared ``text_of`` helper (``tai_agents._internal.text``) that both the
+    """The shared ``text_of`` helper (``tai42_agents._internal.text``) that both the
     vqa stream and the tools-agent projection use to decode message text."""
 
     def test_string_content_returned_verbatim(self) -> None:

@@ -3,7 +3,7 @@
 Fakes the two internal LLM entrypoints the agent reaches — ``ainvoke_tools_agent``
 (each voter) and ``astream_tools_agent_events`` (the judge stream) — so the whole
 workflow runs with no live model or network. They exercise: registration through
-``tai_app``; judge/voter tool-name resolution to live client tools; the judge's
+``tai42_app``; judge/voter tool-name resolution to live client tools; the judge's
 per-step event kinds followed by the terminal ``StructuredFinal``; ``run``
 draining that stream to a ``VotingOutput``; a list of voter specs that can name
 the same provider more than once and pin per-voter models; the model label each
@@ -21,8 +21,8 @@ from typing import Any
 import pytest
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
-from tai_contract.agent import Agent
-from tai_contract.agent.events import (
+from tai42_contract.agent import Agent
+from tai42_contract.agent.events import (
     MessageDelta,
     MessageFinal,
     ReasoningStep,
@@ -32,13 +32,13 @@ from tai_contract.agent.events import (
     ToolCallStep,
     ToolResultStep,
 )
-from tai_contract.app import tai_app
+from tai42_contract.app import tai42_app
 
-from tai_agents._internal.reject import reject_unhonored
-from tai_agents._internal.usage import AgentInvokeResult, CallUsage
-from tai_agents.voting_agent import agent as agent_module
-from tai_agents.voting_agent.agent import VotingAgent, VotingAgentInput
-from tai_agents.voting_agent.model import VoteInfo, VoterSpec, VotingOutput
+from tai42_agents._internal.reject import reject_unhonored
+from tai42_agents._internal.usage import AgentInvokeResult, CallUsage
+from tai42_agents.voting_agent import agent as agent_module
+from tai42_agents.voting_agent.agent import VotingAgent, VotingAgentInput
+from tai42_agents.voting_agent.model import VoteInfo, VoterSpec, VotingOutput
 
 AGENT_NAME = "voting_agent"
 
@@ -96,7 +96,7 @@ def _fake_full_judge_stream(captured: dict[str, Any]):
 
 
 def test_decorator_registers_a_live_voting_agent() -> None:
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     assert isinstance(agent, VotingAgent)
     assert isinstance(agent, Agent)
     assert agent.tool_name == AGENT_NAME
@@ -115,7 +115,7 @@ def test_astream_emits_every_kind_then_structured_final(monkeypatch, app_tools, 
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke(voter_calls))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream(captured))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = asyncio.run(
         _collect(
             agent.astream(
@@ -167,7 +167,7 @@ def test_astream_event_order_tool_call_final_structured(monkeypatch, app_tools, 
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke([]))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", fake_judge)
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = asyncio.run(
         _collect(
             agent.astream(
@@ -190,7 +190,7 @@ def test_run_drains_to_voting_output(monkeypatch, app_tools, resource_manager) -
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke([]))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream(captured))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     result = asyncio.run(
         agent.run(
             judge_message="decide",
@@ -215,7 +215,7 @@ def test_default_voter_uses_judge_provider(monkeypatch, app_tools, resource_mana
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke(voter_calls))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream(captured))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = asyncio.run(
         _collect(
             agent.astream(
@@ -242,7 +242,7 @@ def test_multiple_judge_tools_flow_through_as_a_list(monkeypatch, app_tools, res
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke([]))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream(captured))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     asyncio.run(
         _collect(
             agent.astream(
@@ -267,7 +267,7 @@ def test_duplicate_provider_voters_each_run(monkeypatch, app_tools, resource_man
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke(voter_calls))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream(captured))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = asyncio.run(
         _collect(
             agent.astream(
@@ -303,7 +303,7 @@ def test_voter_model_prefers_run_reported_model(monkeypatch, app_tools, resource
     )
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream(captured))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = asyncio.run(
         _collect(
             agent.astream(
@@ -328,7 +328,7 @@ def test_voter_spec_model_kwarg_folds_into_llm_kwargs(monkeypatch, app_tools, re
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke(voter_calls))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream(captured))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = asyncio.run(
         _collect(
             agent.astream(
@@ -370,7 +370,7 @@ def test_checkpoint_provider_reaches_the_seam_on_both_faces(monkeypatch, app_too
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke(voter_calls))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_checkpoint_judge_stream(captured))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     asyncio.run(
         _collect(
             agent.astream(
@@ -404,7 +404,7 @@ def test_voting_output_response_format_is_accepted_on_both_faces(monkeypatch, ap
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke([]))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream({}))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = asyncio.run(
         _collect(
             agent.astream(
@@ -434,7 +434,7 @@ def test_astream_rejects_foreign_response_format(monkeypatch, app_tools, resourc
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke([]))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream({}))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match=r"voting_agent\.astream does not support response_format"):
         asyncio.run(_collect(agent.astream(judge_message="decide", response_format=_NotVotingOutput)))
 
@@ -446,7 +446,7 @@ def test_run_rejects_foreign_response_format(monkeypatch, app_tools, resource_ma
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke([]))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream({}))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match=r"voting_agent\.run does not support response_format"):
         asyncio.run(agent.run(judge_message="decide", response_format=_NotVotingOutput))
 
@@ -457,7 +457,7 @@ def test_astream_rejects_unhonored_abc_param(monkeypatch, app_tools, resource_ma
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke([]))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream({}))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match=r"voting_agent\.astream does not support .*\bthread_id\b"):
         asyncio.run(_collect(agent.astream(judge_message="decide", thread_id="t1")))
 
@@ -469,7 +469,7 @@ def test_run_rejects_unhonored_abc_param(monkeypatch, app_tools, resource_manage
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke([]))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream({}))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match=r"voting_agent\.run does not support .*\btools\b"):
         asyncio.run(agent.run(judge_message="decide", tools=[_make_tool("x")]))
 
@@ -482,7 +482,7 @@ def test_run_rejects_falsy_but_meaningful_abc_param(monkeypatch, app_tools, reso
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke([]))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream({}))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match=rf"voting_agent\.run does not support .*\b{param}\b"):
         # The base Agent.run signature types some of these non-optional, so the mismatch is expected.
         asyncio.run(agent.run(judge_message="decide", voter_message="answer", **{param: value}))  # type: ignore[arg-type]
@@ -499,7 +499,7 @@ def test_unhonored_none_passes_the_guard(monkeypatch, app_tools, resource_manage
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke([]))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream({}))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     # The base Agent.run signature types some of these non-optional, so the None mismatch is expected.
     result = asyncio.run(agent.run(judge_message="decide", voter_message="answer", **{param: None}))  # type: ignore[arg-type]
     assert isinstance(result, VotingOutput)
@@ -542,7 +542,7 @@ _UNHONORED_CASES = [
 def test_run_rejects_every_unhonored_param(monkeypatch, app_tools, resource_manager, param, value) -> None:
     """run rejects every key in the guard's reasons map, naming it and the run face."""
     _install_reject_fakes(monkeypatch)
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match=rf"voting_agent\.run does not support .*\b{param}\b"):
         asyncio.run(agent.run(judge_message="decide", **{param: value}))
 
@@ -551,7 +551,7 @@ def test_run_rejects_every_unhonored_param(monkeypatch, app_tools, resource_mana
 def test_astream_rejects_every_unhonored_param(monkeypatch, app_tools, resource_manager, param, value) -> None:
     """astream rejects the same full set as run — parity — naming the astream face."""
     _install_reject_fakes(monkeypatch)
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match=rf"voting_agent\.astream does not support .*\b{param}\b"):
         asyncio.run(_collect(agent.astream(judge_message="decide", **{param: value})))
 
@@ -605,7 +605,7 @@ def test_run_names_response_format_and_another_offender_at_once(monkeypatch, app
     the response_format check folds into the shared guard, so the caller fixes both in a
     single pass rather than one raise per run."""
     _install_reject_fakes(monkeypatch)
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError) as excinfo:
         # subagents is typed Sequence[SubAgentSpec]; the object() is deliberately wrong to exercise the guard.
         asyncio.run(agent.run(judge_message="decide", response_format=_NotVotingOutput, subagents=[object()]))  # type: ignore[list-item]
@@ -622,7 +622,7 @@ def test_run_raises_when_required_judge_message_slot_is_unset(monkeypatch, app_t
     passthrough the run would instead complete — a dropped passthrough turns this
     red rather than letting the empty prompt slip through."""
     _install_reject_fakes(monkeypatch)
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(ValueError, match="must provide either"):
         asyncio.run(agent.run(voter_message="answer"))
 
@@ -632,7 +632,7 @@ def test_run_propagates_unknown_template_id_from_the_handle(monkeypatch, app_too
     manager's unknown-id ``RuntimeError`` (it propagates and aborts the run) rather
     than being silently treated as an empty prompt."""
     _install_reject_fakes(monkeypatch)
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match="unknown template id"):
         asyncio.run(agent.run(judge_message_id="no-such-template", voter_message="answer"))
 
@@ -662,7 +662,7 @@ def test_over_limit_voters_raise_before_any_llm_call(monkeypatch, app_tools, res
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_voter_invoke(voter_calls))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream({}))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(ValueError, match="TAI_AGENTS_MAX_VOTERS"):
         asyncio.run(
             _collect(
@@ -707,7 +707,7 @@ def test_voter_concurrency_one_never_overlaps(monkeypatch, app_tools, resource_m
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_overlap_recording_invoke(state))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream({}))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     asyncio.run(
         _collect(
             agent.astream(
@@ -746,7 +746,7 @@ def test_verdict_order_matches_input_order_despite_completion_order(monkeypatch,
     monkeypatch.setattr(agent_module, "ainvoke_tools_agent", _fake_delayed_invoke({"p1": 0.03, "p2": 0.015, "p3": 0.0}))
     monkeypatch.setattr(agent_module, "astream_tools_agent_events", _fake_full_judge_stream({}))
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = asyncio.run(
         _collect(
             agent.astream(

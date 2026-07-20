@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a defect in tai-agents (the reference agents package on the deepagents/LangGraph runtime)
+description: Report a defect in tai42-agents (the reference agents package on the deepagents/LangGraph runtime)
 labels: ["bug"]
 body:
   - type: textarea
@@ -20,7 +20,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: tai-agents version
+      label: tai42-agents version
       placeholder: "0.1.0"
     validations:
       required: true

@@ -8,12 +8,12 @@ permissions:
   contents: read
 
 jobs:
-  # Builds and publishes to PyPI via OIDC trusted publishing — no token secrets.
+  # Builds and publishes to PyPI with an API token held as a repository
+  # secret. The `pypi` environment scopes that secret to this job.
   release:
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      id-token: write
       contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -37,4 +37,7 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
-          attestations: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          # Attestations are minted from the OIDC identity token, which token
+          # auth does not issue.
+          attestations: false

@@ -30,7 +30,7 @@ from langgraph.constants import END
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.store.memory import InMemoryStore
 from pydantic import PrivateAttr, ValidationError
-from tai_contract.agent import (
+from tai42_contract.agent import (
     Agent,
     MessageDelta,
     MessageFinal,
@@ -40,15 +40,15 @@ from tai_contract.agent import (
     ToolCallStep,
     ToolResultStep,
 )
-from tai_contract.app import tai_app
-from tai_kit.utils.data.json_schema_util import JsonSchemaValidationError
-from tai_kit.utils.data.string_util import text_to_md5
+from tai42_contract.app import tai42_app
+from tai42_kit.utils.data.json_schema_util import JsonSchemaValidationError
+from tai42_kit.utils.data.string_util import text_to_md5
 
-from tai_agents._internal.reject import reject_unhonored
-from tai_agents._internal.stream_events import aproject_agent_events
-from tai_agents.retrieval_tools_agent import agent as ragent
-from tai_agents.retrieval_tools_agent import graph as rgraph
-from tai_agents.retrieval_tools_agent.agent import (
+from tai42_agents._internal.reject import reject_unhonored
+from tai42_agents._internal.stream_events import aproject_agent_events
+from tai42_agents.retrieval_tools_agent import agent as ragent
+from tai42_agents.retrieval_tools_agent import graph as rgraph
+from tai42_agents.retrieval_tools_agent.agent import (
     _UNHONORED_REASONS,
     RetrievalToolsAgent,
     RetrievalToolsAgentInput,
@@ -56,7 +56,7 @@ from tai_agents.retrieval_tools_agent.agent import (
     _embedding_dims_cache,
     _terminal_result,
 )
-from tai_agents.retrieval_tools_agent.graph import RetrievalToolsGraph
+from tai42_agents.retrieval_tools_agent.graph import RetrievalToolsGraph
 
 AGENT_NAME = "retrieval_tools_agent"
 
@@ -189,7 +189,7 @@ async def _collect(agen: AsyncIterator[Any]) -> list[Any]:
 
 class TestRegistration:
     def test_decorator_registers_a_live_instance(self) -> None:
-        agent = tai_app.agents.get_agent(AGENT_NAME)
+        agent = tai42_app.agents.get_agent(AGENT_NAME)
         assert isinstance(agent, RetrievalToolsAgent)
         assert isinstance(agent, Agent)
 

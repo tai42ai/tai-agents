@@ -20,7 +20,7 @@ import pytest
 from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 from langchain_core.tools import StructuredTool
 from pydantic import ValidationError
-from tai_contract.agent import (
+from tai42_contract.agent import (
     Agent,
     MessageDelta,
     MessageFinal,
@@ -31,13 +31,13 @@ from tai_contract.agent import (
     ToolCallStep,
     ToolResultStep,
 )
-from tai_contract.app import tai_app
-from tai_kit.utils.data.json_schema_util import JsonSchemaValidationError
+from tai42_contract.app import tai42_app
+from tai42_kit.utils.data.json_schema_util import JsonSchemaValidationError
 
-import tai_agents.refine_agent.agent as agent_mod
-from tai_agents._internal.reject import reject_unhonored
-from tai_agents.refine_agent.agent import RefineAgent, RefineAgentInput
-from tai_agents.refine_agent.prompt import CRITIC_APPROVAL_MESSAGE
+import tai42_agents.refine_agent.agent as agent_mod
+from tai42_agents._internal.reject import reject_unhonored
+from tai42_agents.refine_agent.agent import RefineAgent, RefineAgentInput
+from tai42_agents.refine_agent.prompt import CRITIC_APPROVAL_MESSAGE
 
 AGENT_NAME = "refine_agent"
 
@@ -190,7 +190,7 @@ def _a_tool() -> StructuredTool:
 
 
 def test_decorator_registers_a_live_instance() -> None:
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     assert isinstance(agent, RefineAgent)
     assert isinstance(agent, Agent)
     assert agent.tool_name == AGENT_NAME
@@ -210,7 +210,7 @@ def test_tools_are_resolved_by_name_and_passed_to_both_agents(
     critic = FakeAgent(invoke_contents=[f"approved {CRITIC_APPROVAL_MESSAGE}"])
     recorder = _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     _collect(agent, evaluator_message="write it", critic_message="review it", tool_names=["t1"])
 
     assert recorder.tools_per_call == [[tool], [tool]]  # evaluator, then critic
@@ -221,7 +221,7 @@ def test_unknown_tool_name_raises(monkeypatch: pytest.MonkeyPatch, app_tools: An
     critic = FakeAgent(invoke_contents=[f"approved {CRITIC_APPROVAL_MESSAGE}"])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match="unknown client tools"):
         _collect(agent, evaluator_message="write it", critic_message="review it", tool_names=["missing"])
 
@@ -238,7 +238,7 @@ def test_approval_on_first_iteration_streams_the_final_pass(
     critic = FakeAgent(invoke_contents=[f"looks great {CRITIC_APPROVAL_MESSAGE}"])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = _collect(agent, evaluator_message="write it", critic_message="review it")
 
     # loop ran exactly one evaluator+critic round, then the final pass streamed.
@@ -256,7 +256,7 @@ def test_approval_on_a_later_iteration(monkeypatch: pytest.MonkeyPatch, app_tool
     critic = FakeAgent(invoke_contents=["needs work", "still off", f"ok {CRITIC_APPROVAL_MESSAGE}"])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = _collect(agent, evaluator_message="write it", critic_message="review it", max_iterations=5)
 
     assert len(critic.ainvoke_inputs) == 3  # approved on the third round
@@ -271,7 +271,7 @@ def test_max_iterations_without_approval_raises(
     critic = FakeAgent(invoke_contents=["nope", "still nope"])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match=r"Max iterations \(2\) reached without critic approval"):
         _collect(agent, evaluator_message="write it", critic_message="review it", max_iterations=2)
 
@@ -284,7 +284,7 @@ def test_empty_critic_feedback_raises(monkeypatch: pytest.MonkeyPatch, app_tools
     critic = FakeAgent(invoke_contents=[""])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match="No critic feedback found"):
         _collect(agent, evaluator_message="write it", critic_message="review it")
 
@@ -303,7 +303,7 @@ def test_exact_token_substring_is_recognized_as_approval(
     critic = FakeAgent(invoke_contents=[f"All good here: {CRITIC_APPROVAL_MESSAGE} — ship it"])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = _collect(agent, evaluator_message="write it", critic_message="review it", max_iterations=1)
 
     assert any(isinstance(e, MessageFinal) and e.text == "done" for e in events)
@@ -318,7 +318,7 @@ def test_wrong_case_token_is_not_approval(
     critic = FakeAgent(invoke_contents=[CRITIC_APPROVAL_MESSAGE.upper()])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match="Max iterations"):
         _collect(agent, evaluator_message="write it", critic_message="review it", max_iterations=1)
 
@@ -335,7 +335,7 @@ def test_final_pass_emits_the_full_event_taxonomy(
     critic = FakeAgent(invoke_contents=[f"approved {CRITIC_APPROVAL_MESSAGE}"])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = _collect(agent, evaluator_message="write it", critic_message="review it")
 
     assert [type(e) for e in events] == [
@@ -383,7 +383,7 @@ def test_run_drains_stream_to_final_text(
     critic = FakeAgent(invoke_contents=[f"approved {CRITIC_APPROVAL_MESSAGE}"])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     result = asyncio.run(agent.run(evaluator_message="write it", critic_message="review it"))
     assert result == "Final answer"
 
@@ -411,7 +411,7 @@ def test_run_with_response_format_forces_final_answer_on_a_fresh_thread(
     structured = FakeAgent(invoke_contents=[], stream_items=_structured_stream_items({"answer": "final"}))
     recorder = _patch_loop(monkeypatch, [evaluator, critic, structured])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     result = asyncio.run(
         agent.run(evaluator_message="write it", critic_message="review it", response_format=_REFINE_SCHEMA)
     )
@@ -443,7 +443,7 @@ def test_run_with_response_format_but_no_structured_raises_loudly(
     structured = FakeAgent(invoke_contents=[], stream_items=[("messages", (AIMessageChunk(content="text"), {}))])
     _patch_loop(monkeypatch, [evaluator, critic, structured])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match="no structured output"):
         asyncio.run(agent.run(evaluator_message="write it", critic_message="review it", response_format=_REFINE_SCHEMA))
 
@@ -458,7 +458,7 @@ def test_astream_with_response_format_emits_one_structured_final(
     structured = FakeAgent(invoke_contents=[], stream_items=_structured_stream_items({"answer": "final"}))
     _patch_loop(monkeypatch, [evaluator, critic, structured])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = _collect(agent, evaluator_message="write it", critic_message="review it", response_format=_REFINE_SCHEMA)
     finals = [e for e in events if isinstance(e, StructuredFinal)]
     assert len(finals) == 1
@@ -477,7 +477,7 @@ def test_astream_with_response_format_but_no_structured_raises_loudly(
     structured = FakeAgent(invoke_contents=[], stream_items=[("messages", (AIMessageChunk(content="text"), {}))])
     _patch_loop(monkeypatch, [evaluator, critic, structured])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match="no structured output"):
         _collect(agent, evaluator_message="write it", critic_message="review it", response_format=_REFINE_SCHEMA)
 
@@ -499,7 +499,7 @@ def test_astream_nonconforming_structured_raises(
     structured = FakeAgent(invoke_contents=[], stream_items=_structured_stream_items({"answer": ""}))
     _patch_loop(monkeypatch, [evaluator, critic, structured])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(JsonSchemaValidationError):
         _collect(agent, evaluator_message="write it", critic_message="review it", response_format=schema)
 
@@ -509,7 +509,7 @@ def test_run_response_format_without_title_raises_loudly(
 ) -> None:
     """A ``response_format`` dict lacking a top-level ``"title"`` is rejected loudly at
     the run seam before the loop runs."""
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(ValueError, match="top-level 'title'"):
         asyncio.run(
             agent.run(evaluator_message="write it", critic_message="review it", response_format={"type": "object"})
@@ -521,7 +521,7 @@ def test_astream_response_format_without_title_raises_loudly(
 ) -> None:
     """The streaming face — the one the public run door drives — rejects an untitled
     ``response_format`` up front, exactly as the invoke face does."""
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(ValueError, match="top-level 'title'"):
         _collect(agent, evaluator_message="write it", critic_message="review it", response_format={"type": "object"})
 
@@ -543,7 +543,7 @@ def test_tool_names_honored_on_run_face(monkeypatch: pytest.MonkeyPatch, app_too
     critic = FakeAgent(invoke_contents=[f"approved {CRITIC_APPROVAL_MESSAGE}"])
     recorder = _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     asyncio.run(agent.run(evaluator_message="write it", critic_message="review it", tool_names=["t1"]))
 
     assert recorder.tools_per_call == [[tool], [tool]]  # evaluator, then critic
@@ -583,7 +583,7 @@ def test_astream_rejects_unhonored_contract_param(
     raises loudly on the stream face, naming the offending parameter and the exact
     ``astream`` face it was called on. Falsy-but-meaningful scalars (``strategy=""``,
     ``resume=False``) still raise."""
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match=rf"refine_agent\.astream does not support .*\b{param}\b"):
         _collect(agent, evaluator_message="write it", critic_message="review it", **{param: value})
 
@@ -593,7 +593,7 @@ def test_run_rejects_unhonored_contract_param(param: str, value: Any, app_tools:
     """The ``run`` face rejects the same unsupported parameters, naming the exact
     ``run`` face — the run-face guard is load-bearing (were it dropped, the delegated
     ``astream`` guard would surface the ``astream`` token and fail this assertion)."""
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(RuntimeError, match=rf"refine_agent\.run does not support .*\b{param}\b"):
         # The base ``Agent.run`` signature types some of these non-optional, so the mismatch is expected.
         asyncio.run(agent.run(evaluator_message="write it", critic_message="review it", **{param: value}))  # type: ignore[arg-type]
@@ -654,7 +654,7 @@ def test_unhonored_scalar_none_passes_the_guard(param: str, monkeypatch: pytest.
     critic = FakeAgent(invoke_contents=[f"approved {CRITIC_APPROVAL_MESSAGE}"])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = _collect(agent, evaluator_message="write it", critic_message="review it", **{param: None})
     assert any(isinstance(e, MessageFinal) for e in events)
 
@@ -666,7 +666,7 @@ def test_unhonored_collection_empty_passes_the_guard(monkeypatch: pytest.MonkeyP
     critic = FakeAgent(invoke_contents=[f"approved {CRITIC_APPROVAL_MESSAGE}"])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = _collect(agent, evaluator_message="write it", critic_message="review it", tools=(), presets=[])
     assert any(isinstance(e, MessageFinal) for e in events)
 
@@ -680,7 +680,7 @@ def test_extension_kwarg_is_not_rejected(
     critic = FakeAgent(invoke_contents=[f"approved {CRITIC_APPROVAL_MESSAGE}"])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     events = _collect(agent, evaluator_message="write it", critic_message="review it", role_specific_extra="ok")
 
     assert any(isinstance(e, MessageFinal) for e in events)
@@ -704,7 +704,7 @@ def test_run_raises_when_required_evaluator_message_slot_is_unset(
     critic = FakeAgent(invoke_contents=[f"approved {CRITIC_APPROVAL_MESSAGE}"])
     _patch_loop(monkeypatch, [evaluator, critic])
 
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     with pytest.raises(ValueError, match="must provide either"):
         asyncio.run(agent.run(critic_message="review it"))
 

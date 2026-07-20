@@ -17,10 +17,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from langchain_core.tools import StructuredTool
-from tai_kit.utils.data.json_schema_util import JsonSchemaValidationError
+from tai42_kit.utils.data.json_schema_util import JsonSchemaValidationError
 
-from tai_agents._internal import base_tool_agent as bta
-from tai_agents._internal.usage import CallUsage
+from tai42_agents._internal import base_tool_agent as bta
+from tai42_agents._internal.usage import CallUsage
 
 
 def _tool(name: str) -> StructuredTool:

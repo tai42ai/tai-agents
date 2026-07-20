@@ -2,7 +2,7 @@
 
 Skills are served read-only from the app's template provider. These tests drive
 an in-memory fake template manager (same surface as
-``tai_app.storage.resource_manager``: ``list_resources`` / ``fetch_template`` /
+``tai42_app.storage.resource_manager``: ``list_resources`` / ``fetch_template`` /
 ``upload_template``) bound onto the recording app's storage facet, and prove a
 skill uploaded into the provider is read back through the composite backend, and
 that every write path raises.
@@ -15,9 +15,9 @@ from typing import Any
 
 import pytest
 from deepagents.backends import CompositeBackend, StateBackend
-from tai_contract.app import tai_app
+from tai42_contract.app import tai42_app
 
-from tai_agents.deep_agent.backend import (
+from tai42_agents.deep_agent.backend import (
     SKILLS_ROOT,
     InlineSkillsBackend,
     TemplateSkillsBackend,
@@ -34,7 +34,7 @@ class _TemplateMissing(Exception):
 
 
 class _FakeResourceManager:
-    """In-memory stand-in for ``tai_app.storage.resource_manager``.
+    """In-memory stand-in for ``tai42_app.storage.resource_manager``.
 
     Stores raw key -> content. ``fetch_template`` is the RAW (non-jinja) read the
     backend uses; like the real provider it returns the stored text (``""`` for
@@ -64,7 +64,7 @@ class _FakeResourceManager:
 @pytest.fixture
 def fake_tm(monkeypatch: pytest.MonkeyPatch) -> _FakeResourceManager:
     tm = _FakeResourceManager()
-    monkeypatch.setattr(tai_app.storage, "resource_manager", tm)
+    monkeypatch.setattr(tai42_app.storage, "resource_manager", tm)
     return tm
 
 

@@ -22,12 +22,12 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           path: tai-agents
-      # The committed uv.lock resolves tai-contract and tai-kit from sibling
+      # The committed uv.lock resolves tai42-contract and tai42-kit from sibling
       # checkouts ([tool.uv.sources] editable paths), so CI clones them next to
-      # this repo (tai-kit in turn resolves tai-contract from the same layout).
-      # tai-skeleton is a TEST-ONLY sibling (the dev extra): the e2e suite boots
+      # this repo (tai42-kit in turn resolves tai42-contract from the same layout).
+      # tai42-skeleton is a TEST-ONLY sibling (the dev extra): the e2e suite boots
       # the real skeleton app in-process to prove tools_agent registers, so CI
-      # clones it too (tai-skeleton resolves tai-contract/tai-kit from the same
+      # clones it too (tai42-skeleton resolves tai-contract/tai-kit from the same
       # layout).
       # TEMPORARY (private dev): the sibling repos are private, so cross-repo
       # checkout needs TAI_CI_TOKEN (fine-grained, Contents:read on the tai
@@ -60,7 +60,7 @@ jobs:
           enable-cache: true
       - run: uv python install 3.13
       # The agent runtime is a base dependency (no runtime extras); dev adds the
-      # test/lint tooling and the tai-skeleton e2e sibling. --locked asserts the
+      # test/lint tooling and the tai42-skeleton e2e sibling. --locked asserts the
       # committed uv.lock is current; --python pins the interpreter. The
       # deepagents/LangGraph stack installs as plain locked wheels — no vendor
       # directory or PYTHONPATH bridge.
@@ -100,6 +100,6 @@ jobs:
         run: |
           gh api 'repos/${{ github.repository_owner }}/tai-e2e/dispatches' \
             -f 'event_type=ecosystem-push' \
-            -f 'client_payload[repo]=tai-agents' \
+            -f 'client_payload[repo]=tai42-agents' \
             -f 'client_payload[ref]=${{ github.sha }}' \
             -f 'client_payload[legs]=arq'

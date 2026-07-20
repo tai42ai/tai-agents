@@ -1,26 +1,26 @@
-# Contributing to tai-agents
+# Contributing to tai42-agents
 
-`tai-agents` is the reference package of generic **agents** for the TAI
+`tai42-agents` is the reference package of generic **agents** for the TAI
 ecosystem, built on the deepagents/LangGraph runtime. The hard rule (the plugin
-rule): **it depends on `tai-contract` + `tai-kit` + the agent runtime
+rule): **it depends on `tai42-contract` + `tai42-kit` + the agent runtime
 (`deepagents` / `langgraph` / `langchain-core` / `langchain` / `pydantic` /
 `fastmcp` / `opentelemetry-api`) only and never imports anything outside that
 allowlist — in particular, never the skeleton.** Every agent registers through the
-`tai_app` handle from `tai_contract.app` and is loaded by the host from the
+`tai42_app` handle from `tai42_contract.app` and is loaded by the host from the
 manifest (`agents[].module`) by dynamic import — there is no import edge to the
 skeleton in either direction.
 
 ## Ground rules
 
 - **Imports stay on the allowlist.** The package is contract-facing: it
-  imports `tai-contract` + `tai-kit` + the agent runtime only and never imports
-  `tai-skeleton`. The rule is enforced by ruff (`flake8-tidy-imports`) and by the
+  imports `tai42-contract` + `tai42-kit` + the agent runtime only and never imports
+  `tai42-skeleton`. The rule is enforced by ruff (`flake8-tidy-imports`) and by the
   import-graph test, which walks every shipped module and fails lint and CI on
   any root outside the allowlist:
   ```bash
-  grep -rn "tai_skeleton" src/   # must be empty
+  grep -rn "tai42_skeleton" src/   # must be empty
   ```
-- **No model-provider SDK dependencies.** Model access goes through tai-kit's
+- **No model-provider SDK dependencies.** Model access goes through tai42-kit's
   llm factories, configured per deployment — never a direct provider SDK dep.
 - **Contract fidelity.** An agent's `astream` yields the contract's
   `StreamEvent` taxonomy correctly for what the agent actually does; `run`
@@ -33,10 +33,10 @@ skeleton in either direction.
 
 ## Layout
 
-- `src/tai_agents/` — the agent modules, each registering its agent through
-  `@tai_app.agents.agent(name)`.
-- `src/tai_agents/_internal/` — private helpers shared by the agent modules;
-  nothing here registers through `tai_app`.
+- `src/tai42_agents/` — the agent modules, each registering its agent through
+  `@tai42_app.agents.agent(name)`.
+- `src/tai42_agents/_internal/` — private helpers shared by the agent modules;
+  nothing here registers through `tai42_app`.
 - `tests/` mirrors `src/`.
 
 ## Dev

@@ -13,10 +13,10 @@ from typing import Any
 import pytest
 from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 from langgraph.types import Overwrite
-from tai_kit.utils.data.json_schema_util import JsonSchemaValidationError
+from tai42_kit.utils.data.json_schema_util import JsonSchemaValidationError
 
-import tai_agents._internal.stream_events as stream_events
-from tai_agents._internal.stream_events import (
+import tai42_agents._internal.stream_events as stream_events
+from tai42_agents._internal.stream_events import (
     MessageDelta,
     MessageFinal,
     ReasoningStep,
@@ -26,7 +26,7 @@ from tai_agents._internal.stream_events import (
     aproject_agent_events,
     astream_tools_agent_events,
 )
-from tai_agents._internal.text import text_of
+from tai42_agents._internal.text import text_of
 
 
 class _StubAgent:

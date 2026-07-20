@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from tai_agents._internal.usage import CallUsage, aggregate_usage, usage_event
+from tai42_agents._internal.usage import CallUsage, aggregate_usage, usage_event
 
 
 def _ai(input_tokens=None, output_tokens=None, model=None):

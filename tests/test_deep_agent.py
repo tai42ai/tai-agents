@@ -27,10 +27,10 @@ import pytest
 from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 from langchain_core.tools import StructuredTool
 from pydantic import ValidationError
-from tai_contract.agent import Agent
-from tai_contract.agent.base import AgentInterruptedError, PresetSpec
-from tai_contract.agent.base import SubAgentSpec as NeutralSubAgentSpec
-from tai_contract.agent.events import (
+from tai42_contract.agent import Agent
+from tai42_contract.agent.base import AgentInterruptedError, PresetSpec
+from tai42_contract.agent.base import SubAgentSpec as NeutralSubAgentSpec
+from tai42_contract.agent.events import (
     InterruptFinal,
     MessageDelta,
     MessageFinal,
@@ -40,14 +40,14 @@ from tai_contract.agent.events import (
     ToolCallStep,
     ToolResultStep,
 )
-from tai_contract.app import tai_app
-from tai_kit.utils.data.json_schema_util import JsonSchemaValidationError
+from tai42_contract.app import tai42_app
+from tai42_kit.utils.data.json_schema_util import JsonSchemaValidationError
 
-from tai_agents._internal.reject import reject_unhonored
-from tai_agents.deep_agent import agent as agent_mod
-from tai_agents.deep_agent.agent import DeepAgent, DeepAgentInput, _neutral_to_internal
-from tai_agents.deep_agent.spec import InlineSkill, ResolvedSubAgentSpec
-from tai_agents.deep_agent.tool_spec import DeepSubAgentSpec, resolve_subagent_specs
+from tai42_agents._internal.reject import reject_unhonored
+from tai42_agents.deep_agent import agent as agent_mod
+from tai42_agents.deep_agent.agent import DeepAgent, DeepAgentInput, _neutral_to_internal
+from tai42_agents.deep_agent.spec import InlineSkill, ResolvedSubAgentSpec
+from tai42_agents.deep_agent.tool_spec import DeepSubAgentSpec, resolve_subagent_specs
 
 
 def _client_tool(name: str) -> StructuredTool:
@@ -352,7 +352,7 @@ def test_astream_requires_exactly_one_of_message_or_resume() -> None:
 
 
 def test_deep_agent_registers() -> None:
-    agent = tai_app.agents.get_agent("deep_agent")
+    agent = tai42_app.agents.get_agent("deep_agent")
     assert isinstance(agent, DeepAgent)
     assert isinstance(agent, Agent)
 

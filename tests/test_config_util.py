@@ -1,6 +1,6 @@
 """Unit tests for the LangGraph run-config builders.
 
-Exercises ``init_langgraph_config`` against the recording ``tai_app`` bound in
+Exercises ``init_langgraph_config`` against the recording ``tai42_app`` bound in
 ``conftest.py``: thread-id defaulting, the monitoring callbacks appended from the
 recording backend, the ``TraceContext`` it is built with, and preservation of an
 existing config's ``configurable`` and ``callbacks``. No live monitoring backend
@@ -16,16 +16,16 @@ from __future__ import annotations
 
 from typing import cast
 
-from tai_contract.app import tai_app
+from tai42_contract.app import tai42_app
 
-from tai_agents._internal.config_util import build_run_config, init_langgraph_config
+from tai42_agents._internal.config_util import build_run_config, init_langgraph_config
 from tests.conftest import RecordingMonitoringWriter
 
 CALLBACKS = ["callback-a", "callback-b"]
 
 
 def _writer() -> RecordingMonitoringWriter:
-    return cast(RecordingMonitoringWriter, tai_app.monitoring.active.writer)
+    return cast(RecordingMonitoringWriter, tai42_app.monitoring.active.writer)
 
 
 def test_thread_id_defaulted_when_absent() -> None:

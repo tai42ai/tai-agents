@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
-from tai_contract.agent import (
+from tai42_contract.agent import (
     Agent,
     MessageDelta,
     MessageFinal,
@@ -28,14 +28,14 @@ from tai_contract.agent import (
     ToolCallStep,
     ToolResultStep,
 )
-from tai_contract.agent.base import PresetSpec, SubAgentSpec
-from tai_contract.app import tai_app
+from tai42_contract.agent.base import PresetSpec, SubAgentSpec
+from tai42_contract.app import tai42_app
 
-from tai_agents import tools_agent as tools_agent_module
-from tai_agents._internal.reject import reject_unhonored
-from tai_agents._internal.resolve_tools import resolve_tools
-from tai_agents._internal.usage import AgentInvokeResult, CallUsage
-from tai_agents.tools_agent import ToolsAgent, ToolsAgentInput
+from tai42_agents import tools_agent as tools_agent_module
+from tai42_agents._internal.reject import reject_unhonored
+from tai42_agents._internal.resolve_tools import resolve_tools
+from tai42_agents._internal.usage import AgentInvokeResult, CallUsage
+from tai42_agents.tools_agent import ToolsAgent, ToolsAgentInput
 
 AGENT_NAME = "tools_agent"
 
@@ -54,7 +54,7 @@ def make_tool(name: str, props: dict[str, Any] | None = None) -> StructuredTool:
 
 
 def _get_agent() -> ToolsAgent:
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     assert isinstance(agent, ToolsAgent)
     return agent
 
@@ -65,7 +65,7 @@ def _get_agent() -> ToolsAgent:
 
 
 def test_decorator_registers_a_live_instance() -> None:
-    agent = tai_app.agents.get_agent(AGENT_NAME)
+    agent = tai42_app.agents.get_agent(AGENT_NAME)
     assert isinstance(agent, ToolsAgent)
     assert isinstance(agent, Agent)
     assert agent.tool_name == AGENT_NAME
@@ -251,7 +251,7 @@ def test_preset_tool_invocation_raises_on_unknown_base_tool(app_tools: Any) -> N
     caller's ``except RuntimeError`` behaves the same against fake and real."""
     app_tools.client_tools["flow"] = make_tool("flow", {"q": {"type": "string"}})
     preset = PresetSpec(name="my_flow", base_tool="flow")
-    (preset_tool,) = asyncio.run(resolve_tools(tai_app.tools, [], [], [preset]))
+    (preset_tool,) = asyncio.run(resolve_tools(tai42_app.tools, [], [], [preset]))
     with pytest.raises(RuntimeError, match="unknown base tool"):
         asyncio.run(preset_tool.arun({"q": "x"}))
 
@@ -956,7 +956,7 @@ def test_drain_structured_stream_returns_data(monkeypatch: pytest.MonkeyPatch) -
 def test_astream_never_emits_an_interrupt(monkeypatch: pytest.MonkeyPatch) -> None:
     """This agent has no interrupt source: a normal run's stream carries no
     ``InterruptFinal`` (its absence is by design, not a partial run)."""
-    from tai_contract.agent import InterruptFinal
+    from tai42_contract.agent import InterruptFinal
 
     _script_astream(monkeypatch, [MessageDelta(text="hi"), MessageFinal(text="hi")], {})
     agent = _get_agent()

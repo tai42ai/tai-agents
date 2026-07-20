@@ -1,8 +1,8 @@
 """End-to-end integration test: the real ``tools_agent`` authored and streamed
-through the real tai-skeleton app.
+through the real tai42-skeleton app.
 
-Every other tai-agents test drives an agent against a recording app double; this
-one proves the cross-repo seam. It boots the concrete tai-skeleton app in-process
+Every other tai42-agents test drives an agent against a recording app double; this
+one proves the cross-repo seam. It boots the concrete tai42-skeleton app in-process
 with a manifest that registers the real ``tools_agent`` (this package), then walks
 the full authoring path the skeleton exposes:
 
@@ -14,14 +14,14 @@ the full authoring path the skeleton exposes:
 * the agent is authored into a named preset by baking a ``system_prompt`` as fixed
   kwargs, registered through ``PresetManager.register`` — the same in-memory binding
   call the ``POST /api/presets`` route funnels into (that route, its versioned-store
-  gate, and store persistence are covered by tai-skeleton's own suite; this seam
+  gate, and store persistence are covered by tai42-skeleton's own suite; this seam
   test registers directly, so it needs no store);
 * ``POST /api/agents/authored/{name}/runs`` streams a run whose baked
   ``system_prompt`` reaches the agent's ``astream`` MAPPED to the ``system_message``
   run kwarg — the ``from_tool_input`` override this package delivers — and whose
   scripted events arrive as ordered SSE frames.
 
-tai-skeleton is a DEV/TEST-only dependency (see ``pyproject.toml``); the shipped
+tai42-skeleton is a DEV/TEST-only dependency (see ``pyproject.toml``); the shipped
 wheel never imports it. Determinism: the LLM seam (``astream_tools_agent_events``)
 is scripted so no model or network is touched, the preset is registered in memory
 so boot configures no store and never opens a Postgres connection, and the
@@ -40,25 +40,25 @@ from typing import Any
 import pytest
 from starlette.requests import Request
 from starlette.responses import Response, StreamingResponse
-from tai_contract.access_control.identity import IdentityProvider
-from tai_contract.access_control.registry import (
+from tai42_contract.access_control.identity import IdentityProvider
+from tai42_contract.access_control.registry import (
     get_identity_provider_factory,
     register_identity_provider,
     reset_registry,
 )
-from tai_contract.agent.events import MessageFinal, StructuredFinal
-from tai_contract.app import tai_app
+from tai42_contract.agent.events import MessageFinal, StructuredFinal
+from tai42_contract.app import tai42_app
 
-# Safe under any binding — these modules touch no tai_app HTTP decorators at import
+# Safe under any binding — these modules touch no tai42_app HTTP decorators at import
 # (unlike the routers, which are imported only after the skeleton app is bound).
-from tai_kit.settings import reset_all_settings
-from tai_skeleton.app import instance, lifecycle
-from tai_skeleton.manifest import Manifest
+from tai42_kit.settings import reset_all_settings
+from tai42_skeleton.app import instance, lifecycle
+from tai42_skeleton.manifest import Manifest
 
 from tests.conftest import APP as RECORDING_APP
 
 # One agents entry: the real generic tools-agent, gated in by its registration name.
-_MANIFEST = {"agents": [{"title": "tai-agents", "module": "tai_agents.tools_agent", "include": ["tools_agent"]}]}
+_MANIFEST = {"agents": [{"title": "tai42-agents", "module": "tai42_agents.tools_agent", "include": ["tools_agent"]}]}
 
 _BAKED_SYSTEM_PROMPT = "You are a helpdesk agent."
 
@@ -152,12 +152,12 @@ def _register_offline_identity_provider() -> None:
 
 @pytest.fixture
 def skeleton(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Bind the concrete tai-skeleton app and expose its routers.
+    """Bind the concrete tai42-skeleton app and expose its routers.
 
-    The suite's ``conftest`` binds a recording app double to ``tai_app`` for every
+    The suite's ``conftest`` binds a recording app double to ``tai42_app`` for every
     other test; this e2e alone needs the real skeleton app bound so its HTTP
     routers register and its ``app_context`` boots. The router modules fire
-    ``@tai_app.http.custom_route`` at import, so the skeleton must be bound BEFORE
+    ``@tai42_app.http.custom_route`` at import, so the skeleton must be bound BEFORE
     they import — hence the deferred import here. The prior binding is restored and
     any preset registered during the test is torn down on teardown, so no later
     test observes the skeleton app or a leaked registration.
@@ -201,15 +201,15 @@ def skeleton(monkeypatch: pytest.MonkeyPatch) -> Any:
 
     monkeypatch.setattr(instance, "_app", None)
     reset_all_settings()
-    tai_app.bind(instance.build_app())
-    from tai_skeleton.routers import agents as agents_router
-    from tai_skeleton.routers import presets as presets_router
+    tai42_app.bind(instance.build_app())
+    from tai42_skeleton.routers import agents as agents_router
+    from tai42_skeleton.routers import presets as presets_router
 
     try:
         yield SimpleNamespace(agents=agents_router, presets=presets_router)
     finally:
         # Restore the recording app the suite's conftest binds for every other test.
-        tai_app.bind(RECORDING_APP)
+        tai42_app.bind(RECORDING_APP)
         # Leave the module-level identity registry as this fixture found it: empty.
         reset_registry()
 
@@ -225,7 +225,7 @@ def test_tools_agent_authored_and_streamed_through_the_skeleton(skeleton: Any, m
             # The manifest importer re-execs ``tools_agent`` on boot, so patch the
             # LLM seam on the LIVE module object; ``astream`` resolves the name from
             # that module's globals at call time, so the scripted generator runs.
-            live_module = sys.modules["tai_agents.tools_agent"]
+            live_module = sys.modules["tai42_agents.tools_agent"]
 
             async def fake_events(**kwargs: Any) -> Any:
                 captured.update(kwargs)
@@ -251,7 +251,7 @@ def test_tools_agent_authored_and_streamed_through_the_skeleton(skeleton: Any, m
             # 3. Author it: bake a system_prompt as fixed kwargs over the agent tool.
             #    Register through PresetManager.register — the same in-memory binding
             #    the POST /api/presets route funnels into. That route, its versioned-
-            #    store 503 gate, and store persistence are covered in tai-skeleton's own
+            #    store 503 gate, and store persistence are covered in tai42-skeleton's own
             #    suite; this cross-repo test targets the streaming seam, so it registers
             #    directly on the process manager the run path reads and needs no store.
             await instance.app.preset_manager.register(
@@ -294,7 +294,7 @@ def test_tools_agent_response_format_streams_structured_through_the_skeleton(
 
     async def run() -> None:
         async with instance.app.app_context(Manifest.model_validate(_MANIFEST)):
-            live_module = sys.modules["tai_agents.tools_agent"]
+            live_module = sys.modules["tai42_agents.tools_agent"]
 
             async def fake_events(**kwargs: Any) -> Any:
                 captured.update(kwargs)

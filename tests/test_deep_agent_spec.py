@@ -10,7 +10,7 @@ import pytest
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
-from tai_agents.deep_agent.spec import InlineSkill, ResolvedSubAgentSpec
+from tai42_agents.deep_agent.spec import InlineSkill, ResolvedSubAgentSpec
 
 
 def _tool(name: str = "t") -> StructuredTool:

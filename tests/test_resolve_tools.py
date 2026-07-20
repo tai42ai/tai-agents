@@ -2,7 +2,7 @@
 
 Covers name resolution, preset binding (base tool + fixed kwargs, with fixed
 keys hidden from the exposed schema), and the duplicate-name guard. A fake tool
-facet (mirroring ``tai_app.tools``) stands in for a live app — no LLM.
+facet (mirroring ``tai42_app.tools``) stands in for a live app — no LLM.
 """
 
 import asyncio
@@ -13,10 +13,10 @@ from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 from pydantic.v1 import BaseModel as BaseModelV1
 from pydantic.v1 import Field as FieldV1
-from tai_contract.agent.base import PresetSpec
-from tai_contract.tools import AppTools
+from tai42_contract.agent.base import PresetSpec
+from tai42_contract.tools import AppTools
 
-from tai_agents._internal.resolve_tools import resolve_tools
+from tai42_agents._internal.resolve_tools import resolve_tools
 
 
 def make_tool(name, props=None, required=None):
