@@ -1,0 +1,39 @@
+# Docs regeneration hook.
+#
+# On every push to `main` this fires a `repository_dispatch` at the org's
+# tai-docs repo, which triggers the `regenerate` job in tai-docs' docs.yml.
+# That job regenerates the reference against the source repos' `main` HEAD and
+# opens an automated PR if anything drifted. This is the only addition this
+# repo needs for the unified docs site -- a tiny, isolated hook.
+#
+# The dispatch needs a `TAI_DOCS_DISPATCH_TOKEN` secret (`contents: write` on
+# tai-docs). A fork has no such secret, so the step is skipped there rather
+# than failing the run.
+
+name: notify-docs
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    env:
+      DOCS_DISPATCH_TOKEN: ${{ secrets.TAI_DOCS_DISPATCH_TOKEN }}
+    steps:
+      - name: Trigger the tai-docs regeneration pipeline
+        if: env.DOCS_DISPATCH_TOKEN != ''
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          token: ${{ env.DOCS_DISPATCH_TOKEN }}
+          repository: ${{ github.repository_owner }}/tai-docs
+          event-type: source-repo-push
+          client-payload: |
+            {
+              "repo": "${{ github.repository }}",
+              "sha": "${{ github.sha }}"
+            }

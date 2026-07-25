@@ -1,0 +1,34 @@
+name: Bug report
+description: Report a defect in tai42-agents (the reference agents package on the deepagents/LangGraph runtime)
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Minimal steps or code that reproduce the problem.
+      render: python
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: tai42-agents version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, OS, and the deepagents / langgraph / langchain-core versions.
+      placeholder: "Python 3.13.x, macOS 15"
+    validations:
+      required: true

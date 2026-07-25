@@ -1,0 +1,105 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tai-agents
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          path: tai-agents
+      # The committed uv.lock resolves tai42-contract and tai42-kit from sibling
+      # checkouts ([tool.uv.sources] editable paths), so CI clones them next to
+      # this repo (tai42-kit in turn resolves tai42-contract from the same layout).
+      # tai42-skeleton is a TEST-ONLY sibling (the dev extra): the e2e suite boots
+      # the real skeleton app in-process to prove tools_agent registers, so CI
+      # clones it too (tai42-skeleton resolves tai42-contract/tai42-kit from the same
+      # layout).
+      # TEMPORARY (private dev): the sibling repos are private, so cross-repo
+      # checkout needs TAI_CI_TOKEN (fine-grained, Contents:read on the tai
+      # library repos); the default GITHUB_TOKEN cannot read another private repo.
+      # TODO(public): once these repos are public and tai42-contract/tai42-kit publish
+      # to PyPI, delete the token lines and the sibling checkouts — install from PyPI.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai-contract
+          path: tai-contract
+          token: ${{ secrets.TAI_CI_TOKEN }}
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai-kit
+          path: tai-kit
+          token: ${{ secrets.TAI_CI_TOKEN }}
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai-skeleton
+          path: tai-skeleton
+          token: ${{ secrets.TAI_CI_TOKEN }}
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai-identity-redis
+          path: tai-identity-redis
+          token: ${{ secrets.TAI_CI_TOKEN }}
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          version: "0.11.26"
+          enable-cache: true
+      - run: uv python install 3.13
+      # The agent runtime is a base dependency (no runtime extras); dev adds the
+      # test/lint tooling and the tai42-skeleton e2e sibling. --locked asserts the
+      # committed uv.lock is current; --python pins the interpreter. The
+      # deepagents/LangGraph stack installs as plain locked wheels — no vendor
+      # directory or PYTHONPATH bridge.
+      - run: uv sync --locked --python 3.13 --extra dev
+      - name: Ruff
+        run: uv run ruff check .
+      - name: Ruff format
+        run: uv run ruff format --check .
+      - name: Pyright
+        run: uv run pyright
+      - name: Pytest
+        run: uv run pytest --cov --cov-report=term-missing
+
+  # Fan-out to the downstream integration-test suite: on a push to main, after
+  # `check` is green, this dispatches a repository_dispatch event carrying the
+  # pushed sha. Push-to-main only (never pull_request) so a fork PR cannot
+  # exfiltrate the dispatch token; the payload is built from literal args and
+  # github.sha, so no client-controlled value reaches it. The step is skipped
+  # when the dispatch token is not configured, so a fork -- or any clone without
+  # that secret -- runs green rather than failing on an unreachable target.
+  trigger-e2e:
+    needs: check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # The dispatch authenticates with its own token, not GITHUB_TOKEN, so this
+    # job needs none of the default token's scopes.
+    permissions: {}
+    # Secrets cannot be read from a step-level `if`, so the token is lifted to a
+    # job-level env var that the step condition can test.
+    env:
+      E2E_DISPATCH_TOKEN: ${{ secrets.TAI_E2E_DISPATCH_TOKEN }}
+    steps:
+      - name: Dispatch ecosystem-push to the integration-test suite
+        if: env.E2E_DISPATCH_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ env.E2E_DISPATCH_TOKEN }}
+        run: |
+          gh api 'repos/${{ github.repository_owner }}/tai-e2e/dispatches' \
+            -f 'event_type=ecosystem-push' \
+            -f 'client_payload[repo]=tai-agents' \
+            -f 'client_payload[ref]=${{ github.sha }}' \
+            -f 'client_payload[legs]=arq'
