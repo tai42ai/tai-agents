@@ -32,8 +32,9 @@ jobs:
       # TEMPORARY (private dev): the sibling repos are private, so cross-repo
       # checkout needs TAI_CI_TOKEN (fine-grained, Contents:read on the tai
       # library repos); the default GITHUB_TOKEN cannot read another private repo.
-      # TODO(public): once these repos are public and tai42-contract/tai42-kit publish
-      # to PyPI, delete the token lines and the sibling checkouts — install from PyPI.
+      # TODO(public): once these repos are public AND tai42-contract/tai42-kit/
+      # tai42-skeleton/tai42-identity-redis are published to PyPI, delete the
+      # token lines and the sibling checkouts — install from PyPI.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: ${{ github.repository_owner }}/tai-contract
@@ -73,6 +74,25 @@ jobs:
         run: uv run pyright
       - name: Pytest
         run: uv run pytest --cov --cov-report=term-missing
+      - name: Packaged descriptor
+        # The wheel is what users install, so build it and assert the plugin
+        # descriptor really travels inside it -- at the import path the loader
+        # reads, declaring the same version as the project metadata.
+        run: |
+          set -euo pipefail
+          uv build --wheel --out-dir dist
+          wheel=$(ls dist/*.whl)
+          version=$(uv run --no-sync python -c 'import pathlib, tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')
+          descriptor=$(unzip -p "$wheel" tai42_agents/tai-plugin.yml) || {
+            echo "::error::$wheel does not package tai42_agents/tai-plugin.yml"
+            unzip -l "$wheel"
+            exit 1
+          }
+          printf '%s\n' "$descriptor" | grep -qx "version: $version" || {
+            echo "::error::$wheel packages a tai-plugin.yml that does not declare version: $version"
+            printf '%s\n' "$descriptor"
+            exit 1
+          }
 
   # Fan-out to the downstream integration-test suite: on a push to main, after
   # `check` is green, this dispatches a repository_dispatch event carrying the

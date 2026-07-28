@@ -17,9 +17,10 @@ through the handle:
   run-config helper can be exercised with no live backend.
 * ``tools`` (``AppTools``) — ``get_client_tools`` / ``run_tool`` are backed by the
   mutable ``client_tools`` / ``tool_runners`` maps. A test populates the map it
-  needs; an unknown name raises a ``RuntimeError`` carrying the name, matching the
-  real facet's ``UnknownToolError`` (a ``RuntimeError`` subclass). The
-  ``app_tools`` fixture clears both maps per test so nothing leaks between tests.
+  needs; an unknown name raises a ``RuntimeError`` carrying the name — the
+  ``AppTools`` contract prescribes no exception type, so that is the fake's own
+  unknown-tool signal. The ``app_tools`` fixture clears both maps per test so
+  nothing leaks between tests.
 * ``storage`` (``AppStorage``) — ``resource_manager.render_by_id_or_content`` is
   backed by the mutable ``templates`` map with the real manager's semantics: a
   non-``None`` ``content`` renders to itself, a non-``None`` ``template_id`` looks
@@ -106,9 +107,9 @@ class RecordingTools:
     ``client_tools`` maps a name to a live ``StructuredTool`` returned by
     ``get_client_tools``; ``tool_runners`` maps a base-tool name to a callable
     invoked by ``run_tool`` (used by preset binding). An unknown name raises a
-    ``RuntimeError`` carrying the tool name, matching the real facet's
-    ``UnknownToolError`` (a ``RuntimeError`` subclass) so a caller's
-    ``except RuntimeError`` behaves the same against fake and real.
+    ``RuntimeError`` carrying the tool name: the ``AppTools`` contract declares no
+    exception type for these calls, so this is the fake's own unknown-tool signal
+    and tests assert against it, not against any app-side exception hierarchy.
     """
 
     def __init__(self) -> None:

@@ -8,6 +8,5 @@
 
 ## Checklist
 
-- [ ] Tests pass (`uv run pytest`)
-- [ ] Lint is clean (`uv run ruff check .`)
-- [ ] `CHANGELOG.md` updated under `## [Unreleased]`
+- [ ] Tests pass (`uv run --no-sync pytest --cov --cov-report=term-missing`)
+- [ ] Lint is clean (`uv run --no-sync ruff check .`)

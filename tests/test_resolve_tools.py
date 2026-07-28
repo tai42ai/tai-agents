@@ -11,8 +11,7 @@ from typing import cast
 import pytest
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
-from pydantic.v1 import BaseModel as BaseModelV1
-from pydantic.v1 import Field as FieldV1
+from pydantic.v1 import BaseModel as V1BaseModel
 from tai42_contract.agent.base import PresetSpec
 from tai42_contract.tools import AppTools
 
@@ -193,8 +192,8 @@ def _preset() -> PresetSpec:
     return PresetSpec(name="p", description="d", base_tool="base", fixed_kwargs={})
 
 
-def test_preset_reads_required_from_a_pydantic_v2_args_schema():
-    """A base tool declaring its schema as a pydantic v2 model keeps its required list."""
+def test_preset_reads_required_from_a_pydantic_args_schema():
+    """A base tool declaring its schema as a pydantic model keeps its required list."""
 
     class Schema(BaseModel):
         keep: str
@@ -206,23 +205,9 @@ def test_preset_reads_required_from_a_pydantic_v2_args_schema():
     assert tool.args_schema["required"] == ["keep"]
 
 
-def test_preset_reads_required_from_a_pydantic_v1_args_schema():
-    """``args_schema`` also admits a pydantic v1 model class, which carries its
-    required list under ``schema()`` rather than ``model_json_schema()``."""
-
-    class SchemaV1(BaseModelV1):
-        keep: str
-        drop: str = "d"
-
-    app = cast(AppTools, _SchemaTools(SchemaV1))
-    (tool,) = asyncio.run(resolve_tools(app, [], [], [_preset()]))
-    assert isinstance(tool.args_schema, dict)
-    assert tool.args_schema["required"] == ["keep"]
-
-
-def test_preset_keeps_an_aliased_required_field_required_v2():
-    """An aliased pydantic v2 field declared required stays required on the bound
-    preset tool. ``base_tool.args`` keys a v2 field by its name, so the exposed
+def test_preset_keeps_an_aliased_required_field_required():
+    """An aliased pydantic field declared required stays required on the bound
+    preset tool. ``base_tool.args`` keys a field by its name, so the exposed
     ``required`` carries the field name and the tool is callable with it."""
 
     class Schema(BaseModel):
@@ -236,22 +221,6 @@ def test_preset_keeps_an_aliased_required_field_required_v2():
     assert asyncio.run(tool.arun({"session_id": "s"})) == {"session_id": "s"}
 
 
-def test_preset_keeps_an_aliased_required_field_required_v1():
-    """An aliased pydantic v1 field declared required stays required on the bound
-    preset tool. ``base_tool.args`` keys a v1 field by its alias, so the exposed
-    ``required`` carries the alias and the tool is callable with it."""
-
-    class SchemaV1(BaseModelV1):
-        session_id: str = FieldV1(alias="sessionId")
-
-    app = cast(AppTools, _SchemaTools(SchemaV1))
-    (tool,) = asyncio.run(resolve_tools(app, [], [], [_preset()]))
-    assert isinstance(tool.args_schema, dict)
-    assert tool.args_schema["required"] == ["sessionId"]
-    assert "sessionId" in tool.args
-    assert asyncio.run(tool.arun({"sessionId": "s"})) == {"sessionId": "s"}
-
-
 def test_preset_base_tool_without_an_args_schema_requires_nothing():
     """A base tool that declares no schema requires nothing, rather than erroring."""
     app = cast(AppTools, _SchemaTools(None))
@@ -261,10 +230,41 @@ def test_preset_base_tool_without_an_args_schema_requires_nothing():
 
 
 def test_preset_base_tool_with_an_unsupported_args_schema_raises():
-    """An ``args_schema`` of an unexpected type is refused loudly, never defaulted away."""
+    """An ``args_schema`` of an unexpected type is refused loudly, never defaulted away,
+    and the error names the value's own type."""
     app = cast(AppTools, _SchemaTools(42))
-    with pytest.raises(TypeError, match="unsupported args_schema"):
+    with pytest.raises(TypeError, match="unsupported args_schema") as excinfo:
         asyncio.run(resolve_tools(app, [], [], [_preset()]))
+    assert "of type int" in str(excinfo.value)
+
+
+def test_preset_base_tool_with_an_unsupported_args_schema_class_names_the_class():
+    """An unsupported ``args_schema`` supplied as a class — a pydantic-v1 model, say —
+    is named by the class itself, not by its metaclass (``ModelMetaclass``), which would
+    tell the reader nothing about which schema was rejected."""
+
+    class LegacySchema(V1BaseModel):
+        keep: str
+
+    app = cast(AppTools, _SchemaTools(LegacySchema))
+    with pytest.raises(TypeError, match="unsupported args_schema") as excinfo:
+        asyncio.run(resolve_tools(app, [], [], [_preset()]))
+    assert "of type LegacySchema" in str(excinfo.value)
+    assert "ModelMetaclass" not in str(excinfo.value)
+
+
+def test_preset_base_tool_with_an_unsupported_args_schema_function_names_the_type():
+    """A non-class value that carries its own ``__name__`` — a function, say — is
+    named by its type, not by that ``__name__``: the message reports what kind of
+    value was rejected, never the value's own label."""
+
+    def my_helper() -> None: ...
+
+    app = cast(AppTools, _SchemaTools(my_helper))
+    with pytest.raises(TypeError, match="unsupported args_schema") as excinfo:
+        asyncio.run(resolve_tools(app, [], [], [_preset()]))
+    assert "of type function" in str(excinfo.value)
+    assert "my_helper" not in str(excinfo.value)
 
 
 def _named_preset() -> PresetSpec:

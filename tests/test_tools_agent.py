@@ -246,9 +246,9 @@ def test_run_resolves_tools_and_returns_final_text(
 def test_preset_tool_invocation_raises_on_unknown_base_tool(app_tools: Any) -> None:
     """A preset whose base tool is a registered client tool (so binding succeeds)
     but is absent from ``tool_runners`` surfaces the recording facet's
-    unknown-base-tool ``RuntimeError`` when the bound tool is invoked — the fake's
-    parity with the real ``UnknownToolError`` (a ``RuntimeError`` subclass), so a
-    caller's ``except RuntimeError`` behaves the same against fake and real."""
+    unknown-base-tool ``RuntimeError`` when the bound tool is invoked: binding does
+    not pre-check the runner map, so the failure lands at call time and propagates
+    out of the bound tool rather than being swallowed into a result."""
     app_tools.client_tools["flow"] = make_tool("flow", {"q": {"type": "string"}})
     preset = PresetSpec(name="my_flow", base_tool="flow")
     (preset_tool,) = asyncio.run(resolve_tools(tai42_app.tools, [], [], [preset]))

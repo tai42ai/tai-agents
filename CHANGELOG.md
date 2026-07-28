@@ -1,12 +1,8 @@
 # Changelog
 
-All notable changes to `tai42-agents` are documented here; the format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to this project will be documented in this file.
 
-Until 1.0.0 the API is not stable: **minor (0.x) releases may contain breaking
-changes.**
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
-First release (0.1.0) in preparation — nothing published yet.

@@ -78,7 +78,8 @@ dev = [
     # Test-only: the skeleton-boot e2e integration test (tests/test_skeleton_e2e.py)
     # boots the real tai42-skeleton app in-process to prove tools_agent registers,
     # reports spec_runnable, authors, and streams end-to-end through it. Resolved
-    # from the sibling checkout (the uv source below). This is a DEV/TEST-only
+    # from PyPI under a --no-sources install, or from the local checkout named in
+    # [tool.uv.sources] below when those overrides apply. This is a DEV/TEST-only
     # dependency, NEVER a runtime one — the shipped wheel stays contract-facing and
     # never imports tai42-skeleton (the ruff banned-api guard enforces that for src;
     # the e2e test is the sole, per-file-exempted importer).

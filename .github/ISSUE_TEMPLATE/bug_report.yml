@@ -21,7 +21,7 @@ body:
     id: version
     attributes:
       label: tai42-agents version
-      placeholder: "0.1.0"
+      placeholder: "0.1.1"
     validations:
       required: true
   - type: textarea

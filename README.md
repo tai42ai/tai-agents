@@ -27,14 +27,21 @@ platform-level story:
 
 ## Install
 
-Requires **Python 3.13+**. Nothing is on PyPI yet, so install from source — clone
-this repo alongside your `tai42-skeleton` checkout and add it as an editable
-dependency of the environment that runs the server:
+Requires **Python 3.13+**. Install from PyPI into the environment that runs the
+server:
 
 ```bash
-git clone https://github.com/tai42ai/tai-agents
-cd tai-skeleton   # or your own app checkout
-uv add --editable ../tai-agents   # once published: uv add tai42-agents
+uv add tai42-agents
+```
+
+Or from source — clone this repo and add it as an editable dependency. Clone
+`tai-contract`, `tai-kit`, and `tai-skeleton` beside this repo first —
+`[tool.uv.sources]` resolves them from sibling paths.
+
+```bash
+git clone https://github.com/tai42ai/tai-agents   # next to your app checkout
+cd /path/to/your/app
+uv add --editable ../tai-agents
 ```
 
 The agent runtime (`deepagents`, `langgraph`, `langchain-core`, `langchain`,
@@ -172,21 +179,18 @@ caught too.
 ## Development
 
 ```bash
-uv sync --extra dev
-uv run ruff check
-uv run ruff format --check
-uv run pyright
-uv run pytest
+uv venv --python 3.13
+uv pip install --no-sources --editable ".[dev]"
+uv run --no-sync ruff check .
+uv run --no-sync ruff format --check .
+uv run --no-sync pyright
+uv run --no-sync pytest --cov --cov-report=term-missing
 ```
-
-`[tool.uv.sources]` resolves `tai42-contract` and `tai42-kit` from sibling
-checkouts for local development; the published wheel floors them from the
-index.
 
 **Dependency install is plain.** The deepagents/LangGraph stack (`deepagents`,
 `langgraph`, `langchain-core`, `langchain`, `pydantic`, `opentelemetry-api`,
-`fastmcp`) installs as ordinary locked wheels via `uv sync`; CI runs
-`uv sync --locked` with no extra path setup.
+`fastmcp`) resolves as ordinary wheels from the index — no vendor directory and
+no `PYTHONPATH` bridge.
 
 ## License
 

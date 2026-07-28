@@ -16,7 +16,6 @@ from typing import Any
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel
-from pydantic.v1 import BaseModel as BaseModelV1
 from tai42_contract.agent.base import PresetSpec
 from tai42_contract.tools import AppTools
 
@@ -50,24 +49,26 @@ async def _as_structured_tool(
         return await app_tools.run_tool(preset.base_tool, {**preset.fixed_kwargs, **runtime})
 
     base_tool = (await app_tools.get_client_tools([preset.base_tool]))[0]
-    # ``args_schema`` is a JSON-schema dict, a pydantic model class of either major
-    # version, or None. Read its ``required`` in the same namespace ``base_tool.args``
-    # keys, so filtering against ``props`` below never downgrades a mandatory field.
+    # ``args_schema`` is a JSON-schema dict, a pydantic model class, or None. Read its
+    # ``required`` in the same namespace ``base_tool.args`` keys, so filtering against
+    # ``props`` below never downgrades a mandatory field.
     base_schema = base_tool.args_schema
     if base_schema is None:
         base_required: list[str] = []
     elif isinstance(base_schema, dict):
         base_required = base_schema.get("required", [])
     elif isinstance(base_schema, type) and issubclass(base_schema, BaseModel):
-        # pydantic v2: ``args`` keys by field name, so read ``required`` by field name.
+        # ``args`` keys a model field by field name, so read ``required`` by field name.
         base_required = base_schema.model_json_schema(by_alias=False).get("required", [])
-    elif isinstance(base_schema, type) and issubclass(base_schema, BaseModelV1):
-        # pydantic v1: ``args`` keys by alias, matching ``schema()``'s alias-keyed ``required``.
-        base_required = base_schema.schema().get("required", [])
     else:
+        # A class reaching here (e.g. a pydantic-v1 model) is named by its own
+        # ``__name__``; ``type(...).__name__`` would report its metaclass instead.
+        # Any other value is named by its type — a function or module also carries
+        # a ``__name__``, which names the value, not the type that was rejected.
+        offender = base_schema.__name__ if isinstance(base_schema, type) else type(base_schema).__name__
         raise TypeError(
             f"preset base tool {preset.base_tool!r} exposes an unsupported args_schema of type "
-            f"{type(base_schema).__name__}; expected a JSON-schema dict, a pydantic model class, or None"
+            f"{offender}; expected a JSON-schema dict, a pydantic model class, or None"
         )
     # Accept a list or tuple of names; reject any other shape rather than iterating
     # it (a bare string would be walked char by char, matching no property and

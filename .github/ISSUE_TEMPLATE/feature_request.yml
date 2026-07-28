@@ -14,6 +14,6 @@ body:
     attributes:
       label: tai42-agents version
       description: The version you are using, if relevant.
-      placeholder: "0.1.0"
+      placeholder: "0.1.1"
     validations:
       required: false
