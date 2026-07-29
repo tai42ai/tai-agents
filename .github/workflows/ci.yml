@@ -94,32 +94,43 @@ jobs:
             exit 1
           }
 
-  # Fan-out to the downstream integration-test suite: on a push to main, after
-  # `check` is green, this dispatches a repository_dispatch event carrying the
-  # pushed sha. Push-to-main only (never pull_request) so a fork PR cannot
-  # exfiltrate the dispatch token; the payload is built from literal args and
-  # github.sha, so no client-controlled value reaches it. The step is skipped
-  # when the dispatch token is not configured, so a fork -- or any clone without
-  # that secret -- runs green rather than failing on an unreachable target.
+  # Fleet e2e gate. On push:main and on pull_request, after this repo's own
+  # checks pass, dispatch tai-e2e for the tested sha; tai-e2e runs the cross-repo
+  # suite and posts a `fleet-e2e` commit status back, which branch protection
+  # requires. The dispatch token is a repo Actions secret AND a Dependabot secret
+  # so Dependabot PRs dispatch too; a fork PR has neither, so the guarded step
+  # skips and the required status stays unset for a maintainer to run.
   trigger-e2e:
     needs: check
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    # The dispatch authenticates with its own token, not GITHUB_TOKEN, so this
-    # job needs none of the default token's scopes.
     permissions: {}
-    # Secrets cannot be read from a step-level `if`, so the token is lifted to a
-    # job-level env var that the step condition can test.
     env:
       E2E_DISPATCH_TOKEN: ${{ secrets.TAI_E2E_DISPATCH_TOKEN }}
     steps:
-      - name: Dispatch ecosystem-push to the integration-test suite
+      # Build the payload with jq so the branch name (untrusted) is JSON-escaped,
+      # never interpolated into a shell or into the payload text.
+      - name: Build dispatch payload
+        id: payload
         if: env.E2E_DISPATCH_TOKEN != ''
         env:
-          GH_TOKEN: ${{ env.E2E_DISPATCH_TOKEN }}
+          SRC_REPO: tai-agents
+          SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REF_NAME: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          LEGS: "arq"
         run: |
-          gh api 'repos/${{ github.repository_owner }}/tai-e2e/dispatches' \
-            -f 'event_type=ecosystem-push' \
-            -f 'client_payload[repo]=tai-agents' \
-            -f 'client_payload[ref]=${{ github.sha }}' \
-            -f 'client_payload[legs]=arq'
+          set -euo pipefail
+          payload="$(jq -nc \
+            --arg repo "$SRC_REPO" \
+            --arg ref "$SHA" \
+            --arg ref_name "$REF_NAME" \
+            --arg legs "$LEGS" \
+            '{repo: $repo, ref: $ref, ref_name: $ref_name} + (if $legs == "" then {} else {legs: $legs} end)')"
+          echo "json=$payload" >> "$GITHUB_OUTPUT"
+      - name: Dispatch fleet-e2e
+        if: env.E2E_DISPATCH_TOKEN != ''
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          token: ${{ env.E2E_DISPATCH_TOKEN }}
+          repository: ${{ github.repository_owner }}/tai-e2e
+          event-type: fleet-e2e
+          client-payload: ${{ steps.payload.outputs.json }}
