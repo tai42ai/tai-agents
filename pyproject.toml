@@ -1,0 +1,164 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tai42-agents"
+version = "0.2.0"
+description = "Reference agents package for the TAI ecosystem: opt-in, manifest-loaded generic agents built on the deepagents/LangGraph runtime."
+readme = "README.md"
+requires-python = ">=3.13"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [
+    { name = "tai42", email = "oss@tai42.ai" },
+]
+keywords = ["tai", "agents", "deepagents", "langgraph", "streaming", "llm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+dependencies = [
+    # The pure interface contract the agents register through (the global
+    # tai42_app handle, the Agent ABC, the StreamEvent taxonomy).
+    "tai42-contract>=0.2,<0.3",
+    # Leaf helpers: settings machinery and the llm factories agents configure
+    # model access through (never a direct model-provider SDK).
+    "tai42-kit>=0.2,<0.3",
+    # The agent runtime. Agents are this repo's purpose, so the runtime is a
+    # BASE dependency, not an extra. Floors track the versions the agents are
+    # developed against.
+    "deepagents>=0.5.3",
+    "langgraph>=1.1.6",
+    "langchain-core>=1.2.25",
+    # The prebuilt agent constructor (``langchain.agents.create_agent``) the
+    # tools agents build on. A distinct distribution from langchain-core, imported
+    # directly, so it is declared here rather than leaned on as a transitive.
+    "langchain>=1.3.11",
+    # The model layer the agents describe tool inputs and structured outputs with
+    # (``pydantic.BaseModel`` across the agent modules). Declared directly rather
+    # than relied on as a transitive of the runtime.
+    "pydantic>=2",
+    # Settings base for the agent settings group (``SettingsConfigDict`` in
+    # settings.py); declared directly rather than leaned on as a transitive.
+    "pydantic-settings>=2.11",
+    # OpenTelemetry context reset when starting an independent monitoring trace
+    # (a run must not inherit spans/tags from a caller). Provides
+    # ``opentelemetry.context``; declared directly rather than leaned on as a
+    # transitive of the runtime.
+    "opentelemetry-api>=1.30",
+    # The MCP client the mcp-tools agent opens to convert a caller's MCP servers
+    # into LangChain tools.
+    "fastmcp>=3.2",
+    # Glob matching for the deep-agent skills backends (``wcmatch.glob.globmatch``
+    # with ``BRACE | GLOBSTAR``). Imported directly, so declared here rather than
+    # leaned on as a transitive of the runtime.
+    "wcmatch>=10.1",
+]
+
+[project.urls]
+Homepage = "https://tai42.ai"
+Repository = "https://github.com/tai42ai/tai-agents"
+Issues = "https://github.com/tai42ai/tai-agents/issues"
+Changelog = "https://github.com/tai42ai/tai-agents/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+# Public dev/test tooling.
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+    "pyright>=1.1.389",
+    # The plugin-spec test parses tai-plugin.yml.
+    "pyyaml>=6",
+    # Test-only: the skeleton-boot e2e integration test (tests/test_skeleton_e2e.py)
+    # boots the real tai42-skeleton app in-process to prove tools_agent registers,
+    # reports spec_runnable, authors, and streams end-to-end through it. Resolved
+    # from PyPI under a --no-sources install, or from the local checkout named in
+    # [tool.uv.sources] below when those overrides apply. This is a DEV/TEST-only
+    # dependency, NEVER a runtime one — the shipped wheel stays contract-facing and
+    # never imports tai42-skeleton (the ruff banned-api guard enforces that for src;
+    # the e2e test is the sole, per-file-exempted importer).
+    "tai42-skeleton>=0.2,<0.3",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["tai42_agents*"]
+
+[tool.setuptools.package-data]
+tai42_agents = ["py.typed", "tai-plugin.yml"]
+
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }]
+
+# Dev-only: resolve the sibling packages from local editable checkouts so changes
+# there are picked up without a reinstall. The published version floors in
+# [project].dependencies (and the test-only dev extra) are what metadata declares;
+# these source overrides are not part of wheel metadata. tai42-contract + tai42-kit are
+# runtime dependencies; tai42-skeleton is a TEST-ONLY dependency (the dev extra above)
+# wired here solely for the skeleton-boot e2e test — the shipped wheel is
+# contract-facing and never imports it (the ruff banned-api guard enforces that for
+# src, with the e2e test as the sole per-file exemption).
+[tool.uv.sources]
+tai42-contract = { path = "../tai-contract", editable = true }
+tai42-kit = { path = "../tai-kit", editable = true }
+tai42-skeleton = { path = "../tai-skeleton", editable = true }
+
+[tool.ruff]
+src = ["src"]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "C4", "SIM", "PIE", "PT", "RUF", "TID"]
+
+[tool.ruff.lint.per-file-ignores]
+# The skeleton-boot e2e integration test is the ONE deliberate exemption to the
+# tai42_skeleton import ban below: it boots the real skeleton app in-process to prove
+# tools_agent composes and streams end-to-end. The ban still guards all of src.
+"tests/test_skeleton_e2e.py" = ["TID251"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"tai42_skeleton".msg = "tai42-agents imports tai42-contract + tai42-kit + the agent runtime only; it is contract-facing and never imports tai42-skeleton."
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+xfail_strict = true
+# Escalate warnings to errors so a latent defect fails a test loudly instead of
+# surfacing only as a warning the suite ignores. Both filters are load-bearing, and
+# they work as a pair. A discarded coroutine's "never awaited" RuntimeWarning is
+# emitted while the garbage collector reclaims it: the first filter turns that
+# warning into an exception, and an exception raised there is unraisable, so pytest
+# reports it as a PytestUnraisableExceptionWarning, which only the second filter
+# fails on. Drop either one and code that forgets to await a coroutine passes green.
+filterwarnings = [
+    "error::RuntimeWarning",
+    "error::pytest.PytestUnraisableExceptionWarning",
+    # The skeleton-boot e2e binds agent run tools whose synthesized signature carries a
+    # non-JSON-serializable sentinel default; pydantic correctly excludes it from the
+    # advertised schema and warns while doing so. That exclusion is the intended
+    # behavior, so ignore exactly this message+category (never a bare ignore).
+    "ignore:Default value .* is not JSON serializable; excluding default:pydantic.json_schema.PydanticJsonSchemaWarning",
+]
+
+[tool.coverage.run]
+source = ["tai42_agents"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 95
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.13"
+# Basic (not strict) is deliberate: the deepagents runtime ships no type stubs,
+# so strict is impractical for the agent modules that drive it.
+typeCheckingMode = "basic"
