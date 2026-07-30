@@ -15,56 +15,22 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: tai-agents
+    # Published resolution: UV_NO_SOURCES ignores the [tool.uv.sources] editable
+    # paths so the committed uv.lock resolves released siblings from PyPI. CI is
+    # hermetic — no sibling checkouts. Local dev keeps sources (plain `uv sync`).
+    env:
+      UV_NO_SOURCES: "1"
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          path: tai-agents
-      # The committed uv.lock resolves tai42-contract and tai42-kit from sibling
-      # checkouts ([tool.uv.sources] editable paths), so CI clones them next to
-      # this repo (tai42-kit in turn resolves tai42-contract from the same layout).
-      # tai42-skeleton is a TEST-ONLY sibling (the dev extra): the e2e suite boots
-      # the real skeleton app in-process to prove tools_agent registers, so CI
-      # clones it too (tai42-skeleton resolves tai42-contract/tai42-kit from the same
-      # layout).
-      # TEMPORARY (private dev): the sibling repos are private, so cross-repo
-      # checkout needs TAI_CI_TOKEN (fine-grained, Contents:read on the tai
-      # library repos); the default GITHUB_TOKEN cannot read another private repo.
-      # TODO(public): once these repos are public AND tai42-contract/tai42-kit/
-      # tai42-skeleton/tai42-identity-redis are published to PyPI, delete the
-      # token lines and the sibling checkouts — install from PyPI.
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-contract
-          path: tai-contract
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-kit
-          path: tai-kit
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-skeleton
-          path: tai-skeleton
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-identity-redis
-          path: tai-identity-redis
-          token: ${{ secrets.TAI_CI_TOKEN }}
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           version: "0.11.26"
           enable-cache: true
       - run: uv python install 3.13
       # The agent runtime is a base dependency (no runtime extras); dev adds the
-      # test/lint tooling and the tai42-skeleton e2e sibling. --locked asserts the
-      # committed uv.lock is current; --python pins the interpreter. The
-      # deepagents/LangGraph stack installs as plain locked wheels — no vendor
-      # directory or PYTHONPATH bridge.
+      # test/lint tooling and the tai42-skeleton e2e dep (published wheel).
+      # --locked asserts the committed uv.lock is current; --python pins the
+      # interpreter.
       - run: uv sync --locked --python 3.13 --extra dev
       - name: Ruff
         run: uv run ruff check .

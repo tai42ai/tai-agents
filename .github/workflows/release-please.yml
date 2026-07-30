@@ -30,59 +30,32 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
   # release-please bumps [project].version in pyproject.toml but not uv.lock,
-  # whose own editable entry still pins the old version, so CI's `uv sync --locked`
+  # whose root-package entry still pins the old version, so CI's `uv sync --locked`
   # rejects the release PR fleet-wide. Refresh the lockfile on the release branch
-  # so the PR carries a coherent pyproject.toml + uv.lock pair. Push with the PAT
-  # (not GITHUB_TOKEN) so CI re-fires on the release PR.
+  # so the PR carries a coherent pyproject.toml + uv.lock pair. UV_NO_SOURCES
+  # resolves published siblings from PyPI, so no sibling checkouts are needed.
+  # Push with the PAT (not GITHUB_TOKEN) so CI re-fires on the release PR.
   sync-lock:
     needs: release-please
     if: needs.release-please.outputs.pr != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      UV_NO_SOURCES: "1"
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           ref: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
-          path: tai-agents
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-      # uv.lock pins these first-party deps as editable path entries;
-      # they must be present at ../ for `uv lock` to resolve.
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-contract
-          path: tai-contract
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-identity-redis
-          path: tai-identity-redis
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-kit
-          path: tai-kit
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-skeleton
-          path: tai-skeleton
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-toolbox
-          path: tai-toolbox
-          token: ${{ secrets.TAI_CI_TOKEN }}
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           version: "0.11.26"
           enable-cache: true
       - run: uv python install 3.13
       - name: Refresh uv.lock
-        working-directory: tai-agents
         run: uv lock
       - name: Commit refreshed lockfile
-        working-directory: tai-agents
         env:
           BRANCH: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
         run: |
