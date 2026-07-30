@@ -25,7 +25,7 @@ classifiers = [
 dependencies = [
     # The pure interface contract the agents register through (the global
     # tai42_app handle, the Agent ABC, the StreamEvent taxonomy).
-    "tai42-contract>=0.2,<0.3",
+    "tai42-contract>=0.3,<0.4",
     # Leaf helpers: settings machinery and the llm factories agents configure
     # model access through (never a direct model-provider SDK).
     "tai42-kit>=0.2,<0.3",
@@ -83,7 +83,7 @@ dev = [
     # dependency, NEVER a runtime one — the shipped wheel stays contract-facing and
     # never imports tai42-skeleton (the ruff banned-api guard enforces that for src;
     # the e2e test is the sole, per-file-exempted importer).
-    "tai42-skeleton>=0.2,<0.3",
+    "tai42-skeleton>=0.3,<0.4",
 ]
 
 [tool.setuptools]
