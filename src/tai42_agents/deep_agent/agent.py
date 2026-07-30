@@ -151,7 +151,7 @@ async def _neutral_to_internal(spec: NeutralSubAgentSpec) -> ResolvedSubAgentSpe
     )
 
 
-@tai42_app.agents.agent("deep_agent")
+@tai42_app.agents.agent("deep_agent", tags={"agents"})
 class DeepAgent(Agent):
     tool_name: ClassVar[str] = "deep_agent"
     tool_description: ClassVar[str] = (

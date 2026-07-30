@@ -174,7 +174,7 @@ def _allowed(root):
 
 
 class _StubAgents:
-    def agent(self, name):
+    def agent(self, name, tags=None):
         def decorator(agent_cls):
             return agent_cls
 

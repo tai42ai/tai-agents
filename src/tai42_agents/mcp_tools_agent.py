@@ -115,7 +115,7 @@ def _inject_env(mcp_config: dict[str, Any], env_allowlist: list[str]) -> dict[st
     return {**mcp_config, "mcpServers": new_servers}
 
 
-@tai42_app.agents.agent("mcp_tools_agent")
+@tai42_app.agents.agent("mcp_tools_agent", tags={"agents"})
 class McpToolsAgent(Agent):
     """Run a tools agent whose tools are loaded from an MCP configuration."""
 

@@ -53,10 +53,12 @@ class RecordingAgents:
 
     def __init__(self) -> None:
         self.registry: dict[str, Agent] = {}
+        self.tags: dict[str, set[str]] = {}
 
-    def agent(self, name: str) -> Callable[[type[Agent]], type[Agent]]:
+    def agent(self, name: str, tags: set[str] | None = None) -> Callable[[type[Agent]], type[Agent]]:
         def decorator(agent_cls: type[Agent]) -> type[Agent]:
             self.registry[name] = agent_cls()
+            self.tags[name] = tags or set()
             return agent_cls
 
         return decorator

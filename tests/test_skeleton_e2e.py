@@ -259,7 +259,6 @@ def test_tools_agent_authored_and_streamed_through_the_skeleton(skeleton: Any, m
                 "tools_agent",
                 {"system_prompt": _BAKED_SYSTEM_PROMPT},
                 [],
-                [],
                 "A helpdesk agent.",
             )
 
@@ -306,7 +305,6 @@ def test_tools_agent_response_format_streams_structured_through_the_skeleton(
                 "struct_bot",
                 "tools_agent",
                 {"system_prompt": _BAKED_SYSTEM_PROMPT},
-                [],
                 [],
                 "A structured helpdesk agent.",
             )

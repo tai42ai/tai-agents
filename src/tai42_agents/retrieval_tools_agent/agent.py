@@ -149,7 +149,7 @@ class RetrievalToolsAgentInput(BaseModel):
     embedding_kwargs: dict[str, Any] | None = None
 
 
-@tai42_app.agents.agent("retrieval_tools_agent")
+@tai42_app.agents.agent("retrieval_tools_agent", tags={"agents"})
 class RetrievalToolsAgent(Agent):
     """A tools agent that retrieves its tools on demand from a vector store."""
 

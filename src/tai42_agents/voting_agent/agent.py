@@ -199,7 +199,7 @@ class VotingAgentInput(BaseModel):
     voter_langgraph_config: dict[str, Any] | None = None
 
 
-@tai42_app.agents.agent("voting_agent")
+@tai42_app.agents.agent("voting_agent", tags={"agents"})
 class VotingAgent(Agent):
     """Run a voting workflow: voter LLMs answer in parallel, then a judge LLM
     decides. ``run`` returns the ``VotingOutput``; ``astream`` streams the judge's

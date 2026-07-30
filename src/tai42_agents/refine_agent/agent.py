@@ -245,7 +245,7 @@ class RefineAgentInput(BaseModel):
     critic_langgraph_config: dict[str, Any] | None = None
 
 
-@tai42_app.agents.agent("refine_agent")
+@tai42_app.agents.agent("refine_agent", tags={"agents"})
 class RefineAgent(Agent):
     """Evaluator↔Critic refinement agent. ``astream`` runs the loop silently, then
     streams the final approved evaluator pass; ``run`` drains that stream."""

@@ -126,7 +126,7 @@ class ToolsAgentInput(BaseModel):
     langgraph_config: dict[str, Any] | None = None
 
 
-@tai42_app.agents.agent("tools_agent")
+@tai42_app.agents.agent("tools_agent", tags={"agents"})
 class ToolsAgent(Agent):
     tool_name: ClassVar[str] = "tools_agent"
     tool_description: ClassVar[str] = (

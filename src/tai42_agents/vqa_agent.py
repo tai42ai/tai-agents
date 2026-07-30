@@ -109,7 +109,7 @@ _UNHONORED_COLLECTION_PARAMS: frozenset[str] = frozenset(
 )
 
 
-@tai42_app.agents.agent("vqa_agent")
+@tai42_app.agents.agent("vqa_agent", tags={"agents"})
 class VqaAgent(Agent):
     tool_name: ClassVar[str] = "vqa_agent"
     tool_description: ClassVar[str] = "Analyze an image and answer a query about it using a multimodal LLM."
