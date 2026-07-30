@@ -75,6 +75,10 @@ uv run --no-sync pytest --cov --cov-report=term-missing
 Before any commit, run a secret scan over `src/` and `tests/` (e.g.
 `detect-secrets scan`).
 
+## Dependency resolution
+
+`uv.lock` pins the `tai42-*` siblings to their released index versions while `[tool.uv.sources]` points them at local `../tai-*` checkouts. The two disagree deliberately: CI sets `UV_NO_SOURCES=1` and asserts the lock with `uv sync --locked`, so it resolves the artifacts a user installs. A bare `uv lock` beside sibling checkouts re-couples the lock to editable path entries, which then fails that `--locked` check — run `uv lock --no-sources` instead. See [How dependencies resolve](https://tai42.ai/contributing#how-dependencies-resolve).
+
 ## License
 
 By contributing you agree your contributions are licensed under Apache-2.0.
