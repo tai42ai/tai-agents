@@ -7,8 +7,16 @@
       "skip-changelog": true,
       "package-name": "tai42-agents",
       "extra-files": [
-        "tai-plugin.yml",
-        "src/tai42_agents/tai-plugin.yml"
+        {
+          "type": "yaml",
+          "path": "tai-plugin.yml",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "yaml",
+          "path": "src/tai42_agents/tai-plugin.yml",
+          "jsonpath": "$.version"
+        }
       ]
     }
   }
