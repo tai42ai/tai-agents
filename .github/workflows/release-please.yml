@@ -18,10 +18,81 @@ jobs:
     permissions:
       contents: write # push the release PR branch; create the tag + GitHub Release
       pull-requests: write # open and update the release PR
+    outputs:
+      pr: ${{ steps.release.outputs.pr }}
     steps:
       # The PAT (not GITHUB_TOKEN) is required so the release PR triggers CI and
       # the tag it creates on merge triggers release.yml — refs written by
       # GITHUB_TOKEN do not fire workflows.
       - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        id: release
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+
+  # release-please bumps [project].version in pyproject.toml but not uv.lock,
+  # whose own editable entry still pins the old version, so CI's `uv sync --locked`
+  # rejects the release PR fleet-wide. Refresh the lockfile on the release branch
+  # so the PR carries a coherent pyproject.toml + uv.lock pair. Push with the PAT
+  # (not GITHUB_TOKEN) so CI re-fires on the release PR.
+  sync-lock:
+    needs: release-please
+    if: needs.release-please.outputs.pr != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
+          path: tai-agents
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+      # uv.lock pins these first-party deps as editable path entries;
+      # they must be present at ../ for `uv lock` to resolve.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai-contract
+          path: tai-contract
+          token: ${{ secrets.TAI_CI_TOKEN }}
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai-identity-redis
+          path: tai-identity-redis
+          token: ${{ secrets.TAI_CI_TOKEN }}
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai-kit
+          path: tai-kit
+          token: ${{ secrets.TAI_CI_TOKEN }}
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai-skeleton
+          path: tai-skeleton
+          token: ${{ secrets.TAI_CI_TOKEN }}
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai-toolbox
+          path: tai-toolbox
+          token: ${{ secrets.TAI_CI_TOKEN }}
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          version: "0.11.26"
+          enable-cache: true
+      - run: uv python install 3.13
+      - name: Refresh uv.lock
+        working-directory: tai-agents
+        run: uv lock
+      - name: Commit refreshed lockfile
+        working-directory: tai-agents
+        env:
+          BRANCH: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- uv.lock; then
+            echo "uv.lock already in sync; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add uv.lock
+          git commit -m "chore: sync uv.lock for release"
+          git push origin "HEAD:$BRANCH"
