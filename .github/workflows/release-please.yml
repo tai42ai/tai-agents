@@ -53,6 +53,98 @@ jobs:
           version: "0.11.26"
           enable-cache: true
       - run: uv python install 3.13
+      # A release train publishes first-party siblings one repo at a time;
+      # `uv lock` (UV_NO_SOURCES=1) resolves them from PyPI, so wait for each
+      # required sibling version to publish. Turns an out-of-order lock
+      # failure into a bounded, loud wait instead of a manual lock patch.
+      - name: Wait for first-party requirements on the index
+        run: |
+          uv run --no-project --python 3.13 --with packaging python - <<'PY'
+          # Bounded, loud wait until every first-party (tai42-*) requirement in
+          # pyproject.toml has an index release satisfying its specifier; times out
+          # naming the unsatisfied requirement(s) rather than retrying forever.
+          import json
+          import os
+          import sys
+          import time
+          import tomllib
+          import urllib.error
+          import urllib.request
+
+          from packaging.requirements import Requirement
+          from packaging.specifiers import SpecifierSet
+          from packaging.utils import canonicalize_name
+
+          TIMEOUT_SECONDS = int(os.environ.get("SYNC_LOCK_WAIT_TIMEOUT_SECONDS", "1800"))
+          INTERVAL_SECONDS = int(os.environ.get("SYNC_LOCK_WAIT_INTERVAL_SECONDS", "15"))
+          INDEX = os.environ.get("SYNC_LOCK_INDEX_URL", "https://pypi.org/pypi")
+
+          with open("pyproject.toml", "rb") as fh:
+              pyproject = tomllib.load(fh)
+
+          project = pyproject.get("project", {})
+          own = canonicalize_name(project.get("name", ""))
+
+          raw = list(project.get("dependencies", []))
+          for group in project.get("optional-dependencies", {}).values():
+              raw.extend(group)
+
+          # Collect first-party requirements keyed by canonical name, intersecting
+          # specifiers when a sibling appears in several groups. Self-references (a
+          # package's own extras) resolve locally and are never waited on.
+          required: dict[str, SpecifierSet] = {}
+          for entry in raw:
+              if not isinstance(entry, str):
+                  continue
+              req = Requirement(entry)
+              name = canonicalize_name(req.name)
+              if not name.startswith("tai42-") or name == own:
+                  continue
+              required[name] = required.get(name, SpecifierSet()) & req.specifier
+
+          if not required:
+              print("No first-party requirements to wait on.")
+              sys.exit(0)
+
+
+          def satisfying_version(name: str, spec: SpecifierSet) -> str | None:
+              url = f"{INDEX}/{name}/json"
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as resp:
+                      data = json.load(resp)
+              except urllib.error.HTTPError as exc:
+                  if exc.code == 404:
+                      return None
+                  raise
+              for version, files in data.get("releases", {}).items():
+                  if not files or all(f.get("yanked") for f in files):
+                      continue
+                  if spec.contains(version, prereleases=False):
+                      return version
+              return None
+
+
+          deadline = time.monotonic() + TIMEOUT_SECONDS
+          while True:
+              pending = []
+              for name, spec in sorted(required.items()):
+                  found = satisfying_version(name, spec)
+                  if found is None:
+                      pending.append(f"{name}{spec}")
+                  else:
+                      print(f"satisfied: {name}{spec} -> {found}")
+              if not pending:
+                  print("All first-party requirements are published.")
+                  sys.exit(0)
+              if time.monotonic() >= deadline:
+                  joined = ", ".join(pending)
+                  sys.exit(
+                      f"::error::Timed out after {TIMEOUT_SECONDS}s waiting for "
+                      f"first-party requirement(s) to publish: {joined}"
+                  )
+              print(f"waiting {INTERVAL_SECONDS}s for: {', '.join(pending)}")
+              time.sleep(INTERVAL_SECONDS)
+          PY
       - name: Refresh uv.lock
         run: uv lock
       - name: Commit refreshed lockfile
