@@ -5,7 +5,11 @@
   "packages": {
     ".": {
       "skip-changelog": true,
-      "package-name": "tai42-agents"
+      "package-name": "tai42-agents",
+      "extra-files": [
+        "tai-plugin.yml",
+        "src/tai42_agents/tai-plugin.yml"
+      ]
     }
   }
 }
