@@ -2459,7 +2459,7 @@ provides-extras = ["llm", "jq", "uvicorn", "anthropic", "mistral", "google", "xa
 
 [[package]]
 name = "tai42-skeleton"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "../tai-skeleton" }
 dependencies = [
     { name = "async-lru" },
